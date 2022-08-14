@@ -327,7 +327,7 @@
       <Version>1.11.42</Version>
     </PackageReference>
     <PackageReference Include="SteamKit2">
-      <Version>2.4.1</Version>
+      <Version>2.3.0</Version>
     </PackageReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -8,7 +8,6 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using SteamKit2;
-using static SteamKit2.GC.Dota.Internal.CMsgDOTAFrostivusTimeElapsed;
 
 namespace IdleMasterExtended
 {
@@ -27,6 +26,19 @@ namespace IdleMasterExtended
         public frmLogin()
         {
             InitializeComponent();
+
+            // Initialize the client and user objects to handle the login
+            steamClient = new SteamClient();
+            callbackManager = new CallbackManager(steamClient);
+            steamUser = steamClient.GetHandler<SteamUser>();
+
+            // Set up the callback manager for events we need
+            callbackManager.Subscribe<SteamClient.ConnectedCallback>(OnConnected);
+            callbackManager.Subscribe<SteamClient.DisconnectedCallback>(OnDisconnected);
+
+            callbackManager.Subscribe<SteamUser.LoggedOnCallback>(OnLoggedOn);
+            callbackManager.Subscribe<SteamUser.LoggedOffCallback>(OnLoggedOff);
+            callbackManager.Subscribe<SteamUser.UpdateMachineAuthCallback>(OnMachineAuth);
         }
 
         void OnConnected(SteamClient.ConnectedCallback callback)
@@ -77,19 +89,6 @@ namespace IdleMasterExtended
         private void buttonLogin_Click(object sender, EventArgs e)
         {
             buttonLogin.Enabled = false;
-
-            // Initialize the client and user objects to handle the login
-            steamClient = new SteamClient();
-            callbackManager = new CallbackManager(steamClient);
-            steamUser = steamClient.GetHandler<SteamUser>();
-
-            // Set up the callback manager for events we need
-            callbackManager.Subscribe<SteamClient.ConnectedCallback>(OnConnected);
-            callbackManager.Subscribe<SteamClient.DisconnectedCallback>(OnDisconnected);
-
-            callbackManager.Subscribe<SteamUser.LoggedOnCallback>(OnLoggedOn);
-            callbackManager.Subscribe<SteamUser.LoggedOffCallback>(OnLoggedOff);
-            callbackManager.Subscribe<SteamUser.UpdateMachineAuthCallback>(OnMachineAuth);
 
             steamUsername = textBoxUsername.Text;
             steamPassword = textBoxPassword.Text;
