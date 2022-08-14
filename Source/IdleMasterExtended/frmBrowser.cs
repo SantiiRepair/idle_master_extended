@@ -74,13 +74,17 @@ namespace IdleMasterExtended
             {
                 // Get a list of cookies from the current page
                 CookieContainer container = GetUriCookieContainer(webBrowserAuthentication.Url);
-                var cookies = container.GetCookies(webBrowserAuthentication.Url);
-                foreach (Cookie cookie in cookies)
+                
+                if (container != null)
                 {
-                    if (cookie.Name.StartsWith("steamMachineAuth"))
-                        Settings.Default.steamMachineAuth = cookie.Value;
+                    var cookies = container.GetCookies(webBrowserAuthentication.Url);
+                    foreach (Cookie cookie in cookies)
+                    {
+                        if (cookie.Name.StartsWith("steamMachineAuth"))
+                            Settings.Default.steamMachineAuth = cookie.Value;
+                    }
                 }
-
+                
                 browserBarVisibility(true);
                 setRememberMeCheckbox();
                 removeUnneccessaryWebsiteElements();
