@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Net.Http;
 using System.Text;
 using System.Windows.Forms;
 using SteamKit2;
@@ -7,9 +10,13 @@ namespace IdleMasterExtended
 {
     public partial class frmLogin : Form
     {
+
+
         private SteamClient steamClient;
         private CallbackManager callbackManager;
         private SteamUser steamUser;
+
+        private SteamConfiguration steamConfiguration;
 
         private string steamUsername;
         private string steamPassword;
@@ -21,7 +28,9 @@ namespace IdleMasterExtended
         private EUniverse steamClientUniverse;
 
         private uint steamLoginKeyUniqueID;
-        
+
+        private string steamUserLoginToken;
+        private string steamUserLoginSecure;
 
         private bool isRunning;
         
@@ -119,7 +128,30 @@ namespace IdleMasterExtended
             byte[] loginKey = Encoding.UTF8.GetBytes(steamUserNonce);
             byte[] encryptedLoginKey = CryptoHelper.SymmetricEncrypt(loginKey, sessionKey);
 
-            // GetAsyncWebAPIInterface("ISteamUserAuth")
+
+            Dictionary<string, object> arguments = new Dictionary<string, object>();
+            arguments.Add("encrypted_loginkey", encryptedLoginKey);
+            arguments.Add("sessionkey", encryptedSessionKey);
+            arguments.Add("steamid", steamUserID);
+
+
+            steamConfiguration = SteamConfiguration.Create(c => c.WithHttpClientFactory(() => new System.Net.Http.HttpClient()));
+
+            WebAPI.AsyncInterface steamUserAuthService = steamConfiguration.GetAsyncWebAPIInterface("ISteamUserAuth");
+
+            try
+            {
+                var responseWebAPI = await steamUserAuthService.CallAsync(HttpMethod.Post, "AuthenticateUser", args: arguments).ConfigureAwait(false);
+                steamUserLoginToken = responseWebAPI["token"].AsString();
+                steamUserLoginSecure = responseWebAPI["tokensecure"].AsString();
+            } 
+            catch
+            {
+                isRunning = false;
+                MessageBox.Show("WARNING: Could not get a response...");
+            }
+
+            string sessionID = Convert.ToBase64String(Encoding.UTF8.GetBytes(steamUserID.ToString()));
         }
 
         private void OnWebAPIUserNonceCallback(SteamUser.WebAPIUserNonceCallback callback)
