@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Text;
 using System.Windows.Forms;
 using SteamKit2;
 
@@ -23,6 +24,7 @@ namespace IdleMasterExtended
         
 
         private bool isRunning;
+        
 
         public frmLogin()
         {
@@ -44,11 +46,6 @@ namespace IdleMasterExtended
             callbackManager.Subscribe<SteamUser.LoginKeyCallback>(OnLoginKeyReceived);
             callbackManager.Subscribe<SteamUser.SessionTokenCallback>(OnSessionTokenCallback);
             callbackManager.Subscribe<SteamUser.WebAPIUserNonceCallback>(OnWebAPIUserNonceCallback);
-        }
-
-        private void OnWebAPIUserNonceCallback(SteamUser.WebAPIUserNonceCallback callback)
-        {
-            MessageBox.Show("I got my Web API Nonce callback! " + callback);
         }
 
         void OnConnected(SteamClient.ConnectedCallback callback)
@@ -85,7 +82,9 @@ namespace IdleMasterExtended
             MessageBox.Show("Logged on to Steam as user: " + steamUser.SteamID);
 
             steamUserID = steamUser.SteamID;
+            
             steamClientUniverse = steamClient.Universe;
+            
             steamUserNonce = callback.WebAPIUserNonce;
             steamVanityURL = callback.VanityURL;
 
@@ -100,8 +99,32 @@ namespace IdleMasterExtended
         async void OnLoginKeyReceived(SteamUser.LoginKeyCallback callback)
         {
             steamLoginKeyUniqueID = callback.UniqueID;
-            var webApiUserNonceCallback = await steamUser.RequestWebAPIUserNonce();
-            steamUserNonce = webApiUserNonceCallback.Nonce;
+            
+            if (steamUserNonce is null)
+            {
+                var webApiUserNonceCallback = await steamUser.RequestWebAPIUserNonce();
+                steamUserNonce = webApiUserNonceCallback.Nonce;
+            }
+            else
+            {
+                MessageBox.Show("We already have a user nonce");
+            }
+
+            byte[] publicKey = KeyDictionary.GetPublicKey(steamClientUniverse);
+            RSACrypto rsa = new RSACrypto(publicKey);
+
+            byte[] sessionKey = CryptoHelper.GenerateRandomBlock(32);
+            byte[] encryptedSessionKey = rsa.Encrypt(sessionKey);
+
+            byte[] loginKey = Encoding.UTF8.GetBytes(steamUserNonce);
+            byte[] encryptedLoginKey = CryptoHelper.SymmetricEncrypt(loginKey, sessionKey);
+
+            // GetAsyncWebAPIInterface("ISteamUserAuth")
+        }
+
+        private void OnWebAPIUserNonceCallback(SteamUser.WebAPIUserNonceCallback callback)
+        {
+            MessageBox.Show("I got my Web API Nonce callback! " + callback);
         }
 
         void OnSessionTokenCallback(SteamUser.SessionTokenCallback callback)
