@@ -1,11 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using SteamKit2;
 
@@ -20,6 +13,14 @@ namespace IdleMasterExtended
         private string steamUsername;
         private string steamPassword;
         private string steamGuardCode;
+
+        private SteamID steamUserID;
+        private string steamUserNonce;
+        private string steamVanityURL;
+        private EUniverse steamClientUniverse;
+
+        private uint steamLoginKeyUniqueID;
+        
 
         private bool isRunning;
 
@@ -39,6 +40,15 @@ namespace IdleMasterExtended
             callbackManager.Subscribe<SteamUser.LoggedOnCallback>(OnLoggedOn);
             callbackManager.Subscribe<SteamUser.LoggedOffCallback>(OnLoggedOff);
             callbackManager.Subscribe<SteamUser.UpdateMachineAuthCallback>(OnMachineAuth);
+
+            callbackManager.Subscribe<SteamUser.LoginKeyCallback>(OnLoginKeyReceived);
+            callbackManager.Subscribe<SteamUser.SessionTokenCallback>(OnSessionTokenCallback);
+            callbackManager.Subscribe<SteamUser.WebAPIUserNonceCallback>(OnWebAPIUserNonceCallback);
+        }
+
+        private void OnWebAPIUserNonceCallback(SteamUser.WebAPIUserNonceCallback callback)
+        {
+            MessageBox.Show("I got my Web API Nonce callback! " + callback);
         }
 
         void OnConnected(SteamClient.ConnectedCallback callback)
@@ -72,13 +82,31 @@ namespace IdleMasterExtended
                 return;
             }
 
-            MessageBox.Show("Logged on to Steam as user: " + steamUser.ToString());
+            MessageBox.Show("Logged on to Steam as user: " + steamUser.SteamID);
+
+            steamUserID = steamUser.SteamID;
+            steamClientUniverse = steamClient.Universe;
+            steamUserNonce = callback.WebAPIUserNonce;
+            steamVanityURL = callback.VanityURL;
+
         }
 
         void OnLoggedOff(SteamUser.LoggedOffCallback callback)
         {
             MessageBox.Show("Disconnected from Steam..." + callback.ToString());
             isRunning = false;
+        }
+
+        async void OnLoginKeyReceived(SteamUser.LoginKeyCallback callback)
+        {
+            steamLoginKeyUniqueID = callback.UniqueID;
+            var webApiUserNonceCallback = await steamUser.RequestWebAPIUserNonce();
+            steamUserNonce = webApiUserNonceCallback.Nonce;
+        }
+
+        void OnSessionTokenCallback(SteamUser.SessionTokenCallback callback)
+        {
+            MessageBox.Show("I got my session token! " + callback.SessionToken);
         }
 
         void OnMachineAuth(SteamUser.UpdateMachineAuthCallback callback)
