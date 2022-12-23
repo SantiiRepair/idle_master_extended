@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Deployment.Application;
 using System.Reflection;
-using System.Text;
 using System.Windows.Forms;
 
 namespace IdleMasterExtended

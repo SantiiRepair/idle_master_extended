@@ -29,6 +29,7 @@ namespace IdleMasterExtended
             Application.ThreadException += (o, a) => Logger.Exception(a.Exception);
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
             Application.EnableVisualStyles();
+            Application.SetHighDpiMode(HighDpiMode.SystemAware);
             Application.SetCompatibleTextRenderingDefault(false);
 
             Application.Run(new frmMain());
