@@ -788,9 +788,9 @@ namespace IdleMasterExtended
 
         private void frmMain_Load(object sender, EventArgs e)
         {
-            if (File.Exists(Environment.CurrentDirectory + "\\steam_api.dll") == false)
+            if (File.Exists(Environment.CurrentDirectory + "\\steam_api64.dll") == false)
             {
-                CopyResource("IdleMasterExtended.Resources.steam_api.dll", Environment.CurrentDirectory + @"\steam_api.dll");
+                CopyResource("IdleMasterExtended.Resources.steam_api64.dll", Environment.CurrentDirectory + @"\steam_api64.dll");
             }
             if (File.Exists(Environment.CurrentDirectory + "\\steam-idle.exe") == false)
             {
