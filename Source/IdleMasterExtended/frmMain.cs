@@ -1091,7 +1091,7 @@ namespace IdleMasterExtended
         }
         private void changelogToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Process.Start("https://github.com/JonasNilson/idle_master_extended/releases");
+            Process.Start(new ProcessStartInfo("https://github.com/JonasNilson/idle_master_extended/releases") { UseShellExecute = true });
         }
 
         private void statisticsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1102,17 +1102,17 @@ namespace IdleMasterExtended
 
         private void officialGroupToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Process.Start("https://steamcommunity.com/groups/idlemastery");
+            Process.Start(new ProcessStartInfo("https://steamcommunity.com/groups/idlemastery") { UseShellExecute = true });
         }
 
         private void donateToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Process.Start("https://github.com/JonasNilson/idle_master_extended/wiki/Donate");
+            Process.Start(new ProcessStartInfo("https://github.com/JonasNilson/idle_master_extended/wiki/Donate") { UseShellExecute = true });
         }
 
         private void wikiToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Process.Start("https://github.com/JonasNilson/idle_master_extended/wiki");
+            Process.Start(new ProcessStartInfo("https://github.com/JonasNilson/idle_master_extended/wiki") { UseShellExecute = true });
         }
 
         private void settingsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1166,12 +1166,12 @@ namespace IdleMasterExtended
         #region LINKS
         private void lblGameName_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            Process.Start("https://store.steampowered.com/app/" + CurrentBadge.AppId);
+            Process.Start(new ProcessStartInfo("https://store.steampowered.com/app/" + CurrentBadge.AppId) { UseShellExecute = true });
         }
 
         private void lblCurrentStatus_LinkClicked(object sender, EventArgs e)
         {
-            Process.Start("https://github.com/JonasNilson/idle_master_extended/wiki/Idling-complete");
+            Process.Start(new ProcessStartInfo("https://github.com/JonasNilson/idle_master_extended/wiki/Idling-complete") { UseShellExecute = true });
         }
 
         private void lblCurrentRemaining_Click(object sender, EventArgs e)
@@ -1195,7 +1195,7 @@ namespace IdleMasterExtended
 
         private void lnkLatestRelease_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            Process.Start("https://github.com/JonasNilson/idle_master_extended/releases");
+            Process.Start(new ProcessStartInfo("https://github.com/JonasNilson/idle_master_extended/releases") { UseShellExecute = true });
         }
         #endregion
 

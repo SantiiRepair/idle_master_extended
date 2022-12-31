@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Reflection;
 using System.Windows.Forms;
 
@@ -57,7 +58,7 @@ namespace IdleMasterExtended
 
         private void linkLabelVersion_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            System.Diagnostics.Process.Start("https://github.com/JonasNilson/idle_master_extended/releases");
+            Process.Start(new ProcessStartInfo("https://github.com/JonasNilson/idle_master_extended/releases") { UseShellExecute = true });
         }
     }
 }
