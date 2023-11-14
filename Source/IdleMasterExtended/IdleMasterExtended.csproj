@@ -192,6 +192,7 @@
     <Compile Include="Settings.cs" />
     <Compile Include="Statistics.cs" />
     <Compile Include="SteamProfile.cs" />
+    <Compile Include="ThemeHandler.cs" />
     <EmbeddedResource Include="frmAbout.resx">
       <DependentUpon>frmAbout.cs</DependentUpon>
     </EmbeddedResource>
