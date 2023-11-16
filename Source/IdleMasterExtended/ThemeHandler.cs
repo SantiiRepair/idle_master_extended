@@ -20,6 +20,7 @@ namespace IdleMasterExtended
         static readonly Color DefaultLinkColor = Color.Blue;
 
         static readonly Color DarkBackColor = Color.FromArgb(38, 38, 38);
+        static readonly Color DarkBoxColor = Color.FromArgb(58, 58, 58);
         static readonly Color DarkForeColor = Color.FromArgb(196, 196, 196);
         static readonly Color DarkGreenColor = Color.FromArgb(126, 166, 75);
         static readonly FlatStyle DarkButtonStyle = FlatStyle.Flat;
@@ -46,16 +47,34 @@ namespace IdleMasterExtended
         {
             foreach (Control control in collection)
             {
-                control.BackColor = darkTheme ? DarkBackColor : DefaultBackColor;
-                control.ForeColor = darkTheme ? DarkForeColor : DefaultForeColor;
-
                 if (control is Button button)
                 {
                     button.FlatStyle = darkTheme ? DarkButtonStyle : DefaultButtonStyle;
+                    button.ForeColor = darkTheme ? DarkForeColor : DefaultForeColor;
+                }
+                else if (control is TextBox textBox)
+                {
+                    textBox.BackColor = darkTheme ? DarkBoxColor : DefaultBackColor;
+                    textBox.ForeColor = darkTheme ? DarkForeColor : DefaultForeColor;
+                }
+                else if (control is ListBox listBox)
+                {
+                    listBox.BackColor = darkTheme ? DarkBoxColor : DefaultBackColor;
+                    listBox.ForeColor = darkTheme ? DarkForeColor : DefaultForeColor;
                 }
                 else if (control is LinkLabel linklabel)
                 {
                     linklabel.LinkColor = darkTheme ? DarkLinkColor : DefaultLinkColor;
+                }
+                else if (control is GroupBox groupBox)
+                {
+                    groupBox.ForeColor = darkTheme ? DarkForeColor : DefaultForeColor;
+                    SetThemeControls(groupBox.Controls, darkTheme);
+                }
+                else
+                {
+                    control.BackColor = darkTheme ? DarkBackColor : DefaultBackColor;
+                    control.ForeColor = darkTheme ? DarkForeColor : DefaultForeColor;
                 }
             }
         }
