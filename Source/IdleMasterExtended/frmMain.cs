@@ -1113,19 +1113,21 @@ namespace IdleMasterExtended
 
         private void settingsToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            // Show the form
-            String previous = Settings.Default.sort;
-            bool previous_behavior = Settings.Default.OnlyOneGameIdle;
-            bool previous_behavior2 = Settings.Default.OneThenMany;
-            bool previous_behavior3 = Settings.Default.fastMode;
-            bool previous_behavior4 = Settings.Default.IdlingModeWhitelist;
-            bool previous_behavior5 = Settings.Default.customTheme;
+            string previousSorting = Settings.Default.sort;
+            bool previousOneGameIdle = Settings.Default.OnlyOneGameIdle;
+            bool previousOneThenMany = Settings.Default.OneThenMany;
+            bool previousFastMode = Settings.Default.fastMode;
+            bool previousWhitelistMode = Settings.Default.IdlingModeWhitelist;
+            bool previousCustomTheme = Settings.Default.customTheme;
 
             Form frm = new frmSettings();
             frm.ShowDialog();
 
-            if (previous != Settings.Default.sort || previous_behavior != Settings.Default.OnlyOneGameIdle || previous_behavior2 != Settings.Default.OneThenMany
-                || previous_behavior3 != Settings.Default.fastMode || previous_behavior4 != Settings.Default.IdlingModeWhitelist)
+            if (previousSorting != Settings.Default.sort 
+                || previousOneGameIdle != Settings.Default.OnlyOneGameIdle 
+                || previousOneThenMany != Settings.Default.OneThenMany
+                || previousFastMode != Settings.Default.fastMode 
+                || previousWhitelistMode != Settings.Default.IdlingModeWhitelist)
             {
                 StopIdle();
                 AllBadges.Clear();
@@ -1138,7 +1140,7 @@ namespace IdleMasterExtended
                 lblSignedOnAs.Visible = Settings.Default.showUsername;
             }
 
-            if (!previous_behavior5 && Settings.Default.customTheme)
+            if (previousCustomTheme != Settings.Default.customTheme)
             {
                 ThemeHandler.SetTheme(this, Settings.Default.customTheme);
             }
@@ -1325,21 +1327,38 @@ namespace IdleMasterExtended
         private void tmrCheckCookieData_Tick(object sender, EventArgs e)
         {
             var connected = !string.IsNullOrWhiteSpace(Settings.Default.sessionid) && !string.IsNullOrWhiteSpace(Settings.Default.steamLoginSecure);
-            lblCookieStatus.Text = connected ? localization.strings.idle_master_connected : localization.strings.idle_master_notconnected;
+            
+            lblCookieStatus.Text = connected 
+                ? localization.strings.idle_master_connected 
+                : localization.strings.idle_master_notconnected;
             lnkSignIn.Visible = !connected;
             lnkResetCookies.Visible = connected;
+            
             IsCookieReady = connected;
+
+            ThemeHandler.ToggleStatusIcon(picCookieStatus, connected, Settings.Default.customTheme);
+            ThemeHandler.ToggleStatusLabelColor(lblCookieStatus, connected, Settings.Default.customTheme);
         }
 
         private void tmrCheckSteam_Tick(object sender, EventArgs e)
         {
             var isSteamRunning = SteamAPI.IsSteamRunning() || Settings.Default.ignoreclient;
-            lblSteamStatus.Text = isSteamRunning ? (Settings.Default.ignoreclient ? localization.strings.steam_ignored : localization.strings.steam_running) : localization.strings.steam_notrunning;
+            
+            lblSteamStatus.Text = isSteamRunning 
+                ? (Settings.Default.ignoreclient 
+                    ? localization.strings.steam_ignored 
+                    : localization.strings.steam_running) 
+                : localization.strings.steam_notrunning;
+            
             tmrCheckSteam.Interval = isSteamRunning ? 5000 : 500;
+            
             skipGameToolStripMenuItem.Enabled = isSteamRunning;
             pauseIdlingToolStripMenuItem.Enabled = isSteamRunning;
+            
             IsSteamReady = isSteamRunning;
 
+            ThemeHandler.ToggleStatusIcon(picSteamStatus, isSteamRunning, Settings.Default.customTheme);
+            ThemeHandler.ToggleStatusLabelColor(lblSteamStatus, isSteamRunning, Settings.Default.customTheme);
         }
 
         public void DisableCardDropCheckTimer()

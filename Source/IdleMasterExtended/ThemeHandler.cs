@@ -32,6 +32,9 @@ namespace IdleMasterExtended
         static readonly FlatStyle DarkButtonStyle = FlatStyle.Flat;
         static readonly Color DarkLinkColor = Color.GhostWhite;
 
+        const string PositiveStatusImage = "imgTrue";
+        const string NegativeStatusImage = "imgFalse";
+
         /// <summary>
         /// Sets the theme of the Windows `Form` (default or dark theme). Automatically handles all the `Controls` inside the `Form`.
         /// <br/>
@@ -43,6 +46,42 @@ namespace IdleMasterExtended
         {
             SetThemeForm(form, darkTheme);
             SetThemeControls(form.Controls, darkTheme);
+        }
+
+        /// <summary>
+        /// Toggle the picturebox image to represent a positive or negative status
+        /// </summary>
+        /// <param name="pictureBox">The picturebox to toggle</param>
+        /// <param name="isPositiveStatus">True if it's a positive status (e.g. Steam is running), else false/param>
+        /// <param name="darkTheme">True if dark theme, else false</param>
+        public static void ToggleStatusIcon(PictureBox pictureBox, bool isPositiveStatus, bool darkTheme)
+        {
+            if (isPositiveStatus && ResourceExists(PositiveStatusImage))
+            {
+                pictureBox.Image = GetImageFromResources(PositiveStatusImage, darkTheme);
+            }
+            else if (!isPositiveStatus && ResourceExists(NegativeStatusImage))
+            {
+                pictureBox.Image = GetImageFromResources(NegativeStatusImage, darkTheme);
+            }
+        }
+
+        /// <summary>
+        /// Toggle the label text to represent a positive or negative status
+        /// </summary>
+        /// <param name="label"></param>
+        /// <param name="isPositiveStatus"></param>
+        /// <param name="darkTheme"></param>
+        public static void ToggleStatusLabelColor(Label label, bool isPositiveStatus, bool darkTheme)
+        {
+            if (isPositiveStatus)
+            {
+                label.ForeColor = darkTheme ? DarkGreenColor : DefaultGreenColor;
+            }
+            else if (!isPositiveStatus)
+            {
+                label.ForeColor = darkTheme ? DarkForeColor : DefaultForeColor;
+            }
         }
 
         /// <summary>
