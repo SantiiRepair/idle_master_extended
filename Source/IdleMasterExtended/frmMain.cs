@@ -1478,8 +1478,8 @@ namespace IdleMasterExtended
                 btnSkip.Image = whiteIcons ? Resources.imgSkipSmall_w : Resources.imgSkipSmall;
 
                 // LOADING GIF
-                picIdleStatus.Image = whiteIcons ? Resources.imgSpinInv : Resources.imgSpin;
-                picReadingPage.Image = whiteIcons ? Resources.imgSpinInv : Resources.imgSpin;
+                picIdleStatus.Image = whiteIcons ? Resources.imgSpin_w : Resources.imgSpin;
+                picReadingPage.Image = whiteIcons ? Resources.imgSpin_w : Resources.imgSpin;
             }
         }
         #endregion

@@ -1,4 +1,9 @@
-﻿using System.Drawing;
+﻿using IdleMasterExtended.Properties;
+using mshtml;
+using System;
+using System.Drawing;
+using System.Reflection;
+using System.Resources;
 using System.Windows.Forms;
 using static System.Windows.Forms.Control;
 
@@ -14,6 +19,7 @@ namespace IdleMasterExtended
         /// </summary>
 
         static readonly Color DefaultBackColor = SystemColors.Control;
+        static readonly Color DefaultBoxColor = SystemColors.Window;
         static readonly Color DefaultForeColor = SystemColors.ControlText;
         static readonly Color DefaultGreenColor = Color.Green;
         static readonly FlatStyle DefaultButtonStyle = FlatStyle.Standard;
@@ -51,15 +57,20 @@ namespace IdleMasterExtended
                 {
                     button.FlatStyle = darkTheme ? DarkButtonStyle : DefaultButtonStyle;
                     button.ForeColor = darkTheme ? DarkForeColor : DefaultForeColor;
+
+                    if (button.Image != null && ResourceExists(button.Tag as string))
+                    {
+                        button.Image = GetImageFromResources(darkTheme, button.Tag as string);
+                    }
                 }
                 else if (control is TextBox textBox)
                 {
-                    textBox.BackColor = darkTheme ? DarkBoxColor : DefaultBackColor;
+                    textBox.BackColor = darkTheme ? DarkBoxColor : DefaultBoxColor;
                     textBox.ForeColor = darkTheme ? DarkForeColor : DefaultForeColor;
                 }
                 else if (control is ListBox listBox)
                 {
-                    listBox.BackColor = darkTheme ? DarkBoxColor : DefaultBackColor;
+                    listBox.BackColor = darkTheme ? DarkBoxColor : DefaultBoxColor;
                     listBox.ForeColor = darkTheme ? DarkForeColor : DefaultForeColor;
                 }
                 else if (control is LinkLabel linklabel)
@@ -77,6 +88,26 @@ namespace IdleMasterExtended
                     control.ForeColor = darkTheme ? DarkForeColor : DefaultForeColor;
                 }
             }
+        }
+
+        private static bool ResourceExists(string resourceName)
+        {
+            if (string.IsNullOrEmpty(resourceName))
+            { 
+                return false;
+            }
+            else
+            {
+                return Resources.ResourceManager.GetObject(resourceName) != null;
+            }
+        }
+
+
+        private static Image GetImageFromResources(bool darkTheme, string defaultImageName)
+        {
+            string imageResourceName = darkTheme ? $"{defaultImageName}_w" : defaultImageName;
+
+            return Resources.ResourceManager.GetObject(imageResourceName) as Image;
         }
     }
 }
