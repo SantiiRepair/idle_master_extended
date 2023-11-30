@@ -285,59 +285,8 @@ namespace IdleMasterExtended
 
         private void LoadCustomThemeSettings()
         {
-            // Read settings
-            var customTheme = Settings.Default.customTheme;
-            var whiteIcons = Settings.Default.whiteIcons;
-
-            // Set checkboxes (Not necessary, as the checkboxes are bound to the global setting)
-            //darkThemeCheckBox.Checked = customTheme;
-            //whiteIconsCheckBox.Checked = whiteIcons;
-
-            if (customTheme)
-            {
-                // Custom theme colors (could be user selected, probably)
-                Settings.Default.colorBgd = Color.FromArgb(38, 38, 38);
-                Settings.Default.colorTxt = Color.FromArgb(196, 196, 196);
-            }
-
-            // Define colors
-            Color colorBgd = customTheme ? Settings.Default.colorBgd : Settings.Default.colorBgdOriginal;
-            Color colorTxt = customTheme ? Settings.Default.colorTxt : Settings.Default.colorTxtOriginal;
-
-            // Define button style
-            FlatStyle buttonStyle = customTheme ? FlatStyle.Flat : FlatStyle.Standard;
-
-            // --------------------------
-            // -- APPLY THEME SETTINGS --
-            // --------------------------
-
-            // Form colors
-            this.BackColor = colorBgd;
-            this.ForeColor = colorTxt;
-
-            SetCustomTheme(customTheme, colorBgd, colorTxt, buttonStyle);
+            ThemeHandler.SetTheme(this, Settings.Default.customTheme);
             Settings.Default.Save();
-        }
-
-        private void SetCustomTheme(bool customTheme, Color colorBgd, Color colorTxt, FlatStyle buttonStyle)
-        {
-            // Group title colors
-            grpGeneral.ForeColor = grpIdlingQuantity.ForeColor = grpPriority.ForeColor = colorTxt;
-
-            // Dropdown
-            cboLanguage.BackColor = colorBgd;
-            cboLanguage.ForeColor = colorTxt;
-
-            // Buttons
-            btnOK.FlatStyle = btnCancel.FlatStyle = btnAdvanced.FlatStyle = buttonStyle;
-            btnOK.BackColor = btnCancel.BackColor = btnAdvanced.BackColor = colorBgd;
-            btnOK.ForeColor = btnCancel.ForeColor = btnAdvanced.ForeColor = colorTxt;
-
-            // Link labels
-            linkLabelAppData.LinkColor = lnkGitHubWiki.LinkColor = customTheme ? Color.GhostWhite : Color.Blue;
-
-            // Update the icon(s)
-            btnAdvanced.Image = Settings.Default.whiteIcons ? Resources.imgLock_w : Resources.imgLock;
         }
     }
 }
