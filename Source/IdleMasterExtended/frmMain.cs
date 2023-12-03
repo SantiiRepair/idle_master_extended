@@ -20,35 +20,243 @@ using System.Runtime.InteropServices;
 
 namespace IdleMasterExtended
 {
-    public partial class frmMain : Form
+    public partial class FrmMain : Form
     {
-        private Statistics statistics = new Statistics();
-        public List<Badge> AllBadges { get; set; }
+        internal List<Badge> AllBadges { get; set; }
+        private Badge CurrentBadge;
 
-        public IEnumerable<Badge> CanIdleBadges
+        private readonly Statistics statistics = new Statistics();
+
+        private const int MaxSimultanousCards = 30;
+
+        private const int FifteenMinutes = 900;
+        private const int FiveMinutes = 300;
+        private int TimeLeft = FifteenMinutes;
+        
+        private int RetryCount = 0;
+        private int ReloadCount = 0;
+
+        private bool IsCookieReady;
+        private bool IsSteamReady;
+
+        private int CardsRemaining { get { return CanIdleBadges.Sum(b => b.RemainingCard); } }
+        private int GamesRemaining { get { return CanIdleBadges.Count(); } }
+
+        private IEnumerable<Badge> CanIdleBadges
         {
-            get { return AllBadges.Where(b => b.RemainingCard != 0).Where(b => (!Settings.Default.IdleOnlyPlayed) || (b.HoursPlayed) > 0.0); }
+            get
+            {
+                return AllBadges.Where(badge => badge.RemainingCard != 0)
+                                .Where(badge => !Settings.Default.IdleOnlyPlayed || badge.HoursPlayed > 0.0);
+            }
         }
 
-        public bool IsCookieReady;
-        public bool IsSteamReady;
-        public int MaxSimultanousCards = 30;
-        public int TimeLeft = 900;
-        public int TimeSet = 300;
-        public int RetryCount = 0;
-        public int ReloadCount = 0;
-        public int CardsRemaining { get { return CanIdleBadges.Sum(b => b.RemainingCard); } }
-        public int GamesRemaining { get { return CanIdleBadges.Count(); } }
-        public Badge CurrentBadge;
-
-        private bool IsCurrentThemeCustom;
-        private bool IsCurrentIconsWhite;
-
-        public frmMain()
+        public FrmMain()
         {
             InitializeComponent();
             AllBadges = new List<Badge>();
         }
+
+        #region FORM
+        private void ResetFormDesign()
+        {
+            picReadingPage.Visible = false;
+            picIdleStatus.Visible = false;
+            lblDrops.Text = localization.strings.badge_didnt_load.Replace("__num__", "10");
+            lblIdle.Text = "";
+
+            // Set the form height
+            var graphics = CreateGraphics();
+            var scale = graphics.DpiY * 1.625;
+            Height = Convert.ToInt32(scale);
+            ssFooter.Visible = false;
+        }
+
+        private void FrmMain_Load(object sender, EventArgs e)
+        {
+            // Update the settings, if needed.  When the application updates, settings will persist.
+            if (Settings.Default.updateNeeded)
+            {
+                Settings.Default.Upgrade();
+                Settings.Default.updateNeeded = false;
+                Settings.Default.Save();
+            }
+
+            // Set the interface language from the settings
+            if (Settings.Default.language != "")
+            {
+                string language_string = "";
+                switch (Settings.Default.language)
+                {
+                    case "Bulgarian":
+                        language_string = "bg";
+                        break;
+                    case "Chinese (Simplified, China)":
+                        language_string = "zh-CN";
+                        break;
+                    case "Chinese (Traditional, China)":
+                        language_string = "zh-TW";
+                        break;
+                    case "Czech":
+                        language_string = "cs";
+                        break;
+                    case "Danish":
+                        language_string = "da";
+                        break;
+                    case "Dutch":
+                        language_string = "nl";
+                        break;
+                    case "English":
+                        language_string = "en";
+                        break;
+                    case "Finnish":
+                        language_string = "fi";
+                        break;
+                    case "French":
+                        language_string = "fr";
+                        break;
+                    case "German":
+                        language_string = "de";
+                        break;
+                    case "Greek":
+                        language_string = "el";
+                        break;
+                    case "Hungarian":
+                        language_string = "hu";
+                        break;
+                    case "Italian":
+                        language_string = "it";
+                        break;
+                    case "Japanese":
+                        language_string = "ja";
+                        break;
+                    case "Korean":
+                        language_string = "ko";
+                        break;
+                    case "Norwegian":
+                        language_string = "no";
+                        break;
+                    case "Polish":
+                        language_string = "pl";
+                        break;
+                    case "Portuguese":
+                        language_string = "pt-PT";
+                        break;
+                    case "Portuguese (Brazil)":
+                        language_string = "pt-BR";
+                        break;
+                    case "Romanian":
+                        language_string = "ro";
+                        break;
+                    case "Russian":
+                        language_string = "ru";
+                        break;
+                    case "Spanish":
+                        language_string = "es";
+                        break;
+                    case "Swedish":
+                        language_string = "sv";
+                        break;
+                    case "Thai":
+                        language_string = "th";
+                        break;
+                    case "Turkish":
+                        language_string = "tr";
+                        break;
+                    case "Ukrainian":
+                        language_string = "uk";
+                        break;
+                    case "Croatian":
+                        language_string = "hr";
+                        break;
+                    default:
+                        language_string = "en";
+                        break;
+                }
+                Thread.CurrentThread.CurrentUICulture = new CultureInfo(language_string);
+            }
+
+            // Localize form elements
+            fileToolStripMenuItem.Text = localization.strings.file;
+            gameToolStripMenuItem.Text = localization.strings.game;
+            helpToolStripMenuItem.Text = localization.strings.help;
+            settingsToolStripMenuItem.Text = localization.strings.settings;
+            blacklistToolStripMenuItem.Text = localization.strings.blacklist;
+            exitToolStripMenuItem.Text = localization.strings.exit;
+            pauseIdlingToolStripMenuItem.Text = localization.strings.pause_idling;
+            resumeIdlingToolStripMenuItem.Text = localization.strings.resume_idling;
+            skipGameToolStripMenuItem.Text = localization.strings.skip_current_game;
+            blacklistCurrentGameToolStripMenuItem.Text = localization.strings.blacklist_current_game;
+            statisticsToolStripMenuItem.Text = localization.strings.statistics;
+            changelogToolStripMenuItem.Text = localization.strings.release_notes;
+            officialGroupToolStripMenuItem.Text = localization.strings.official_group;
+            aboutToolStripMenuItem.Text = localization.strings.about;
+            lnkSignIn.Text = "(" + localization.strings.sign_in + ")";
+            lnkResetCookies.Text = "(" + localization.strings.sign_out + ")";
+            // TODO: lnkLatestRelease = "(" + localization.strings.latest_release + ")";
+            toolStripStatusLabel1.Text = localization.strings.next_check;
+            toolStripStatusLabel1.ToolTipText = localization.strings.next_check;
+
+            lblSignedOnAs.Text = localization.strings.signed_in_as;
+            GamesState.Columns[0].Text = localization.strings.name;
+            GamesState.Columns[1].Text = localization.strings.hours;
+
+            // Set the form height
+            var graphics = CreateGraphics();
+            var scale = graphics.DpiY * 1.625;
+            Height = Convert.ToInt32(scale);
+
+            // Set the location of certain elements so that they scale correctly for different DPI settings
+            var point = new Point(Convert.ToInt32(graphics.DpiX * 1.14), Convert.ToInt32(lblGameName.Location.Y));
+            lblGameName.Location = point;
+            point = new Point(Convert.ToInt32(graphics.DpiX * 2.35), Convert.ToInt32(lnkSignIn.Location.Y));
+            lnkSignIn.Location = point;
+            point = new Point(Convert.ToInt32(graphics.DpiX * 2.15), Convert.ToInt32(lnkResetCookies.Location.Y));
+            lnkResetCookies.Location = point;
+            point = new Point(Convert.ToInt32(graphics.DpiX * 2.15), Convert.ToInt32(lnkLatestRelease.Location.Y));
+            lnkLatestRelease.Location = point;
+
+            ThemeHandler.SetTheme(this, Properties.Settings.Default.customTheme);
+            GetLatestVersion();
+
+            //Prevent Sleep
+            if (Settings.Default.NoSleep)
+            {
+                PreventSleep();
+            }
+        }
+
+        private void FrmMain_FormClose(object sender, FormClosedEventArgs e)
+        {
+            StopIdle();
+        }
+
+        private void FrmMain_Resize(object sender, EventArgs e)
+        {
+            if (WindowState == FormWindowState.Minimized)
+            {
+                if (Settings.Default.minToTray)
+                {
+                    notifyIcon1.Visible = true;
+                    Hide();
+                }
+            }
+            else if (WindowState == FormWindowState.Normal)
+            {
+                notifyIcon1.Visible = false;
+            }
+        }
+
+        private void FrmMain_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            //Restore Sleep Settings on close
+            if (Settings.Default.NoSleep == true)
+            {
+                AllowSleep();
+            }
+            this.Close();
+        }
+        #endregion
 
         #region BADGES
         public async Task LoadBadgesAsync()
@@ -129,6 +337,7 @@ namespace IdleMasterExtended
             int pagesCount = Convert.ToInt32(lastpage);
             return pagesCount;
         }
+
         public void SortBadges(string method)
         {
             lblDrops.Text = localization.strings.sorting_results;
@@ -205,7 +414,7 @@ namespace IdleMasterExtended
             else
             {
                 // Resets the clock based on the number of remaining drops
-                TimeLeft = badge.RemainingCard == 1 ? 300 : 900;
+                TimeLeft = badge.RemainingCard == 1 ? FiveMinutes : FifteenMinutes;
             }
 
             lblCurrentRemaining.Text = badge.RemainingCard == -1 ? "" : badge.RemainingCard + " " + localization.strings.card_drops_remaining;
@@ -445,7 +654,7 @@ namespace IdleMasterExtended
             EnableCardDropCheckTimer();
 
             // Reset the timer
-            TimeLeft = CurrentBadge.RemainingCard == 1 ? 300 : 900;
+            TimeLeft = CurrentBadge.RemainingCard == 1 ? FiveMinutes : FifteenMinutes;
 
             // Set the correct buttons on the form for pause / resume
             ShowInterruptiveButtons();
@@ -570,7 +779,7 @@ namespace IdleMasterExtended
                 }
                 else
                 {
-                    Form1_Closing(this, null);
+                    FrmMain_Closing(this, null);
                 }
             }
         }
@@ -770,207 +979,6 @@ namespace IdleMasterExtended
 
             // Re-enable tmrReadyToGo
             tmrReadyToGo.Enabled = true;
-        }
-        #endregion
-
-        #region FORM
-        private void ResetFormDesign()
-        {
-            picReadingPage.Visible = false;
-            picIdleStatus.Visible = false;
-            lblDrops.Text = localization.strings.badge_didnt_load.Replace("__num__", "10");
-            lblIdle.Text = "";
-
-            // Set the form height
-            var graphics = CreateGraphics();
-            var scale = graphics.DpiY * 1.625;
-            Height = Convert.ToInt32(scale);
-            ssFooter.Visible = false;
-        }
-
-        private void frmMain_Load(object sender, EventArgs e)
-        {
-            // Update the settings, if needed.  When the application updates, settings will persist.
-            if (Settings.Default.updateNeeded)
-            {
-                Settings.Default.Upgrade();
-                Settings.Default.updateNeeded = false;
-                Settings.Default.Save();
-            }
-
-            // Set the interface language from the settings
-            if (Settings.Default.language != "")
-            {
-                string language_string = "";
-                switch (Settings.Default.language)
-                {
-                    case "Bulgarian":
-                        language_string = "bg";
-                        break;
-                    case "Chinese (Simplified, China)":
-                        language_string = "zh-CN";
-                        break;
-                    case "Chinese (Traditional, China)":
-                        language_string = "zh-TW";
-                        break;
-                    case "Czech":
-                        language_string = "cs";
-                        break;
-                    case "Danish":
-                        language_string = "da";
-                        break;
-                    case "Dutch":
-                        language_string = "nl";
-                        break;
-                    case "English":
-                        language_string = "en";
-                        break;
-                    case "Finnish":
-                        language_string = "fi";
-                        break;
-                    case "French":
-                        language_string = "fr";
-                        break;
-                    case "German":
-                        language_string = "de";
-                        break;
-                    case "Greek":
-                        language_string = "el";
-                        break;
-                    case "Hungarian":
-                        language_string = "hu";
-                        break;
-                    case "Italian":
-                        language_string = "it";
-                        break;
-                    case "Japanese":
-                        language_string = "ja";
-                        break;
-                    case "Korean":
-                        language_string = "ko";
-                        break;
-                    case "Norwegian":
-                        language_string = "no";
-                        break;
-                    case "Polish":
-                        language_string = "pl";
-                        break;
-                    case "Portuguese":
-                        language_string = "pt-PT";
-                        break;
-                    case "Portuguese (Brazil)":
-                        language_string = "pt-BR";
-                        break;
-                    case "Romanian":
-                        language_string = "ro";
-                        break;
-                    case "Russian":
-                        language_string = "ru";
-                        break;
-                    case "Spanish":
-                        language_string = "es";
-                        break;
-                    case "Swedish":
-                        language_string = "sv";
-                        break;
-                    case "Thai":
-                        language_string = "th";
-                        break;
-                    case "Turkish":
-                        language_string = "tr";
-                        break;
-                    case "Ukrainian":
-                        language_string = "uk";
-                        break;
-                    case "Croatian":
-                        language_string = "hr";
-                        break;
-                    default:
-                        language_string = "en";
-                        break;
-                }
-                Thread.CurrentThread.CurrentUICulture = new CultureInfo(language_string);
-            }
-
-            // Localize form elements
-            fileToolStripMenuItem.Text = localization.strings.file;
-            gameToolStripMenuItem.Text = localization.strings.game;
-            helpToolStripMenuItem.Text = localization.strings.help;
-            settingsToolStripMenuItem.Text = localization.strings.settings;
-            blacklistToolStripMenuItem.Text = localization.strings.blacklist;
-            exitToolStripMenuItem.Text = localization.strings.exit;
-            pauseIdlingToolStripMenuItem.Text = localization.strings.pause_idling;
-            resumeIdlingToolStripMenuItem.Text = localization.strings.resume_idling;
-            skipGameToolStripMenuItem.Text = localization.strings.skip_current_game;
-            blacklistCurrentGameToolStripMenuItem.Text = localization.strings.blacklist_current_game;
-            statisticsToolStripMenuItem.Text = localization.strings.statistics;
-            changelogToolStripMenuItem.Text = localization.strings.release_notes;
-            officialGroupToolStripMenuItem.Text = localization.strings.official_group;
-            aboutToolStripMenuItem.Text = localization.strings.about;
-            lnkSignIn.Text = "(" + localization.strings.sign_in + ")";
-            lnkResetCookies.Text = "(" + localization.strings.sign_out + ")";
-            // TODO: lnkLatestRelease = "(" + localization.strings.latest_release + ")";
-            toolStripStatusLabel1.Text = localization.strings.next_check;
-            toolStripStatusLabel1.ToolTipText = localization.strings.next_check;
-
-            lblSignedOnAs.Text = localization.strings.signed_in_as;
-            GamesState.Columns[0].Text = localization.strings.name;
-            GamesState.Columns[1].Text = localization.strings.hours;
-
-            // Set the form height
-            var graphics = CreateGraphics();
-            var scale = graphics.DpiY * 1.625;
-            Height = Convert.ToInt32(scale);
-
-            // Set the location of certain elements so that they scale correctly for different DPI settings
-            var point = new Point(Convert.ToInt32(graphics.DpiX * 1.14), Convert.ToInt32(lblGameName.Location.Y));
-            lblGameName.Location = point;
-            point = new Point(Convert.ToInt32(graphics.DpiX * 2.35), Convert.ToInt32(lnkSignIn.Location.Y));
-            lnkSignIn.Location = point;
-            point = new Point(Convert.ToInt32(graphics.DpiX * 2.15), Convert.ToInt32(lnkResetCookies.Location.Y));
-            lnkResetCookies.Location = point;
-            point = new Point(Convert.ToInt32(graphics.DpiX * 2.15), Convert.ToInt32(lnkLatestRelease.Location.Y));
-            lnkLatestRelease.Location = point;
-
-            ThemeHandler.SetTheme(this, Properties.Settings.Default.customTheme);
-            GetLatestVersion();
-
-            //Prevent Sleep
-            if (Settings.Default.NoSleep)
-            {
-                PreventSleep();
-            }
-        }
-
-        private void frmMain_FormClose(object sender, FormClosedEventArgs e)
-        {
-            StopIdle();
-        }
-
-        private void frmMain_Resize(object sender, EventArgs e)
-        {
-            if (WindowState == FormWindowState.Minimized)
-            {
-                if (Settings.Default.minToTray)
-                {
-                    notifyIcon1.Visible = true;
-                    Hide();
-                }
-            }
-            else if (WindowState == FormWindowState.Normal)
-            {
-                notifyIcon1.Visible = false;
-            }
-        }
-
-        private void Form1_Closing(object sender, System.ComponentModel.CancelEventArgs e)
-        {
-            //Restore Sleep Settings on close
-            if (Settings.Default.NoSleep == true)
-            {
-                AllowSleep();
-            }
-            this.Close();
         }
         #endregion
 

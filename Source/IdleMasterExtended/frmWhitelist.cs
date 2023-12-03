@@ -7,9 +7,9 @@ namespace IdleMasterExtended
 {
     public partial class frmWhitelist : Form
     {
-        frmMain mainForm;
+        FrmMain mainForm;
 
-        public frmWhitelist(frmMain parentForm)
+        public frmWhitelist(FrmMain parentForm)
         {
             this.mainForm = parentForm;
             InitializeComponent();

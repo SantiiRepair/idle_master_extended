@@ -3,7 +3,7 @@ using System.Windows.Forms;
 
 namespace IdleMasterExtended
 {
-    partial class frmMain
+    partial class FrmMain
     {
         /// <summary>
         /// Required designer variable.
@@ -32,7 +32,7 @@ namespace IdleMasterExtended
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(frmMain));
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(FrmMain));
             this.lblCookieStatus = new System.Windows.Forms.Label();
             this.tmrCheckCookieData = new System.Windows.Forms.Timer(this.components);
             this.lblSteamStatus = new System.Windows.Forms.Label();
@@ -647,9 +647,9 @@ namespace IdleMasterExtended
             this.MaximizeBox = false;
             this.Name = "frmMain";
             this.Text = "Idle Master Extended";
-            this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.frmMain_FormClose);
-            this.Load += new System.EventHandler(this.frmMain_Load);
-            this.Resize += new System.EventHandler(this.frmMain_Resize);
+            this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.FrmMain_FormClose);
+            this.Load += new System.EventHandler(this.FrmMain_Load);
+            this.Resize += new System.EventHandler(this.FrmMain_Resize);
             this.mnuTop.ResumeLayout(false);
             this.mnuTop.PerformLayout();
             this.ssFooter.ResumeLayout(false);
