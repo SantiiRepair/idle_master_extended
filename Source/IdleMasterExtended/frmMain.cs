@@ -1143,6 +1143,8 @@ namespace IdleMasterExtended
             if (previousCustomTheme != Settings.Default.customTheme)
             {
                 ThemeHandler.SetTheme(this, Settings.Default.customTheme);
+                ToggleCookieStatusIconAndText();
+                ToggleSteamStatusIconAndText();
             }
         }
 
@@ -1326,35 +1328,47 @@ namespace IdleMasterExtended
 
         private void tmrCheckCookieData_Tick(object sender, EventArgs e)
         {
-            var connected = !string.IsNullOrWhiteSpace(Settings.Default.sessionid) && !string.IsNullOrWhiteSpace(Settings.Default.steamLoginSecure);
             
-            lblCookieStatus.Text = connected 
-                ? localization.strings.idle_master_connected 
+            ToggleCookieStatusIconAndText();
+        }
+
+        private void tmrCheckSteam_Tick(object sender, EventArgs e)
+        {
+            
+            ToggleSteamStatusIconAndText();
+        }
+
+        private void ToggleCookieStatusIconAndText()
+        {
+            var connected = !string.IsNullOrWhiteSpace(Settings.Default.sessionid) && !string.IsNullOrWhiteSpace(Settings.Default.steamLoginSecure);
+
+            lblCookieStatus.Text = connected
+                ? localization.strings.idle_master_connected
                 : localization.strings.idle_master_notconnected;
             lnkSignIn.Visible = !connected;
             lnkResetCookies.Visible = connected;
-            
+
             IsCookieReady = connected;
 
             ThemeHandler.ToggleStatusIcon(picCookieStatus, connected, Settings.Default.customTheme);
             ThemeHandler.ToggleStatusLabelColor(lblCookieStatus, connected, Settings.Default.customTheme);
         }
 
-        private void tmrCheckSteam_Tick(object sender, EventArgs e)
+        private void ToggleSteamStatusIconAndText()
         {
             var isSteamRunning = SteamAPI.IsSteamRunning() || Settings.Default.ignoreclient;
-            
-            lblSteamStatus.Text = isSteamRunning 
-                ? (Settings.Default.ignoreclient 
-                    ? localization.strings.steam_ignored 
-                    : localization.strings.steam_running) 
+
+            lblSteamStatus.Text = isSteamRunning
+                ? (Settings.Default.ignoreclient
+                    ? localization.strings.steam_ignored
+                    : localization.strings.steam_running)
                 : localization.strings.steam_notrunning;
-            
+
             tmrCheckSteam.Interval = isSteamRunning ? 5000 : 500;
-            
+
             skipGameToolStripMenuItem.Enabled = isSteamRunning;
             pauseIdlingToolStripMenuItem.Enabled = isSteamRunning;
-            
+
             IsSteamReady = isSteamRunning;
 
             ThemeHandler.ToggleStatusIcon(picSteamStatus, isSteamRunning, Settings.Default.customTheme);

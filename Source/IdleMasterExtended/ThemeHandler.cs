@@ -149,15 +149,9 @@ namespace IdleMasterExtended
                 {
                     menuStrip.BackColor = darkTheme ? DarkBackColor : DefaultBackColor;
                     menuStrip.ForeColor = darkTheme ? DarkForeColor : DefaultForeColor;
-                    
-                    foreach (ToolStripMenuItem menuItem in menuStrip.Items)
-                    {
-                        menuItem.BackColor = menuItem.DropDown.BackColor = menuStrip.BackColor;
-                        menuItem.ForeColor = menuItem.DropDown.ForeColor = menuStrip.ForeColor;
-                        HandleToolStripMenuSubItems(menuItem, darkTheme);
-                    }
+                    SetThemeMenuStripItems(darkTheme, menuStrip);
                 }
-                
+
                 else
                 {
                     control.BackColor = darkTheme ? DarkBackColor : DefaultBackColor;
@@ -167,20 +161,37 @@ namespace IdleMasterExtended
         }
 
         /// <summary>
+        /// Go through each menu strip item (dropdown) and apply the theme color and image.
+        /// </summary>
+        /// <param name="darkTheme"></param>
+        /// <param name="menuStrip"></param>
+        private static void SetThemeMenuStripItems(bool darkTheme, MenuStrip menuStrip)
+        {
+            foreach (ToolStripMenuItem menuStripItem in menuStrip.Items)
+            {
+                menuStripItem.BackColor = menuStripItem.DropDown.BackColor = menuStrip.BackColor;
+                menuStripItem.ForeColor = menuStripItem.DropDown.ForeColor = menuStrip.ForeColor;
+                SetImageDropDownItems(menuStripItem, darkTheme);
+            }
+        }
+
+        /// <summary>
         /// Makes sure we only handle the necessary toolstrip sub-items, i.e. ToolStripMenuItems with a parent ToolStripMenuItem.
         /// This avoids issues with for example `ToolStripSeparator` that cannot be cast to `ToolStripMenuItem`.
         /// </summary>
         /// <param name="menuItem">The parent ToolStripMenuItem</param>
         /// <param name="darkTheme">True if a dark theme, otherwise False</param>
-        private static void HandleToolStripMenuSubItems(ToolStripMenuItem menuItem, bool darkTheme)
+        private static void SetImageDropDownItems(ToolStripMenuItem menuItem, bool darkTheme)
         {
             foreach (object dropDownItem in menuItem.DropDownItems)
             {
                 if (dropDownItem is ToolStripMenuItem dropDownMenuItem)
                 {
-                    if (dropDownMenuItem.Image != null && ResourceExists(dropDownMenuItem.Tag as string))
+                    string itemImageTag = dropDownMenuItem.Tag as string;
+
+                    if (dropDownMenuItem.Image != null && ResourceExists(itemImageTag))
                     {
-                        dropDownMenuItem.Image = GetImageFromResources(dropDownMenuItem.Tag as string, darkTheme);
+                        dropDownMenuItem.Image = GetImageFromResources(itemImageTag, darkTheme);
                     }
                 }
             }
