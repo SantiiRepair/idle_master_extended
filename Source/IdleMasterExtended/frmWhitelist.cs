@@ -47,7 +47,7 @@ namespace IdleMasterExtended
                 if (lstWhitelist.Items.Count == 1)
                 {
                     mainForm.StartSoloIdle(
-                        mainForm.AllBadges.FirstOrDefault(b => b.AppId == int.Parse(lstWhitelist.Items[0].ToString()))
+                        BadgePageHandler.AllBadges.FirstOrDefault(b => b.AppId == int.Parse(lstWhitelist.Items[0].ToString()))
                     );
                 }
                 else if (lstWhitelist.Items.Count > 1)

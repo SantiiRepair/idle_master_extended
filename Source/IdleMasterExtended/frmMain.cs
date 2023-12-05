@@ -22,7 +22,6 @@ namespace IdleMasterExtended
 {
     public partial class FrmMain : Form
     {
-        internal List<Badge> AllBadges { get; set; }
         private Badge CurrentBadge;
 
         private readonly Statistics statistics = new Statistics();
@@ -32,29 +31,14 @@ namespace IdleMasterExtended
         private const int FifteenMinutes = 900;
         private const int FiveMinutes = 300;
         private int TimeLeft = FifteenMinutes;
-        
-        private int RetryCount = 0;
-        private int ReloadCount = 0;
 
         private bool IsCookieReady;
         private bool IsSteamReady;
 
-        private int CardsRemaining { get { return CanIdleBadges.Sum(b => b.RemainingCard); } }
-        private int GamesRemaining { get { return CanIdleBadges.Count(); } }
-
-        private IEnumerable<Badge> CanIdleBadges
-        {
-            get
-            {
-                return AllBadges.Where(badge => badge.RemainingCard != 0)
-                                .Where(badge => !Settings.Default.IdleOnlyPlayed || badge.HoursPlayed > 0.0);
-            }
-        }
-
         public FrmMain()
         {
             InitializeComponent();
-            AllBadges = new List<Badge>();
+            BadgePageHandler.AllBadges = new List<Badge>();
         }
 
         #region FORM
@@ -259,154 +243,6 @@ namespace IdleMasterExtended
         #endregion
 
         #region BADGES
-        public async Task LoadBadgesAsync()
-        {
-            picReadingPage.Visible = true;
-
-            if (Settings.Default.IdlingModeWhitelist)
-            {
-                AllBadges.Clear();
-
-                foreach (var whitelistID in Settings.Default.whitelist)
-                {
-                    int applicationID;
-                    if (int.TryParse(whitelistID, out applicationID)
-                        && !AllBadges.Any(badge => badge.AppId.Equals(applicationID)))
-                    {
-                        AllBadges.Add(new Badge(whitelistID, "App ID: " + whitelistID, "-1", "0"));
-                    }
-                }
-            }
-            else
-            {
-                try
-                {
-                    HtmlDocument htmlDocument;
-                    int totalBadgePages = 1;
-
-                    for (var currentBadgePage = 1; currentBadgePage <= totalBadgePages; currentBadgePage++)
-                    {
-                        if (totalBadgePages == 1)
-                        {
-                            htmlDocument = await GetBadgePageAsync(currentBadgePage);
-                            totalBadgePages = ExtractTotalBadgePages(htmlDocument);
-                        }
-
-                        lblDrops.Text = string.Format(localization.strings.reading_badge_page + " {0}/{1}, " + localization.strings.please_wait, currentBadgePage, totalBadgePages);
-                        htmlDocument = await GetBadgePageAsync(currentBadgePage);
-                        ProcessBadgesOnPage(htmlDocument);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Logger.Exception(ex, "Badge -> LoadBadgesAsync, for profile = " + Settings.Default.myProfileURL);
-                    ResetFormDesign();
-                    ReloadCount = 1;
-                    tmrBadgeReload.Enabled = true;
-                    return;
-                }
-            }
-
-            ResetRetryCountAndUpdateApplicationState();
-        }
-
-        private async Task<HtmlDocument> GetBadgePageAsync(int pageNumber)
-        {
-            var document = new HtmlDocument();
-            var profileLink = Settings.Default.myProfileURL + "/badges";
-            var pageURL = string.Format("{0}/?p={1}", profileLink, pageNumber);
-            var response = await CookieClient.GetHttpAsync(pageURL);
-            CheckIfResponseIsNullWithRetryCount(response);
-            document.LoadHtml(response);
-
-            return document;
-        }
-
-        private static int ExtractTotalBadgePages(HtmlDocument document)
-        {
-            // If user is authenticated, check page count. If user is not authenticated, pages are different.
-            var pages = new List<string>() { "?p=1" };
-            var pageNodes = document.DocumentNode.SelectNodes("//a[@class=\"pagelink\"]");
-            if (pageNodes != null)
-            {
-                pages.AddRange(pageNodes.Select(p => p.Attributes["href"].Value).Distinct());
-                pages = pages.Distinct().ToList();
-            }
-
-            string lastpage = pages.Last().ToString().Replace("?p=", "");
-            int pagesCount = Convert.ToInt32(lastpage);
-            return pagesCount;
-        }
-
-        public void SortBadges(string method)
-        {
-            lblDrops.Text = localization.strings.sorting_results;
-            switch (method)
-            {
-                case "mostcards":
-                    AllBadges = AllBadges.OrderByDescending(b => b.RemainingCard).ToList();
-                    break;
-                case "leastcards":
-                    AllBadges = AllBadges.OrderBy(b => b.RemainingCard).ToList();
-                    break;
-                default:
-                    return;
-            }
-        }
-
-        private void CheckIfResponseIsNullWithRetryCount(string response)
-        {
-            // Response should be empty. User should be unauthorised.
-            if (string.IsNullOrEmpty(response))
-            {
-                RetryCount++;
-                if (RetryCount == 18)
-                {
-                    ResetClientStatus();
-                    return;
-                }
-                throw new Exception("Response is null or empty. Added (+1) to RetryCount");
-            }
-        }
-        
-        /// <summary>
-        /// Processes all badges on page
-        /// </summary>
-        /// <param name="document">HTML document (1 page) from x</param>
-        private void ProcessBadgesOnPage(HtmlDocument document)
-        {
-            foreach (var badge in document.DocumentNode.SelectNodes("//div[@class=\"badge_row is_link\"]"))
-            {
-                var appIdNode = badge.SelectSingleNode(".//a[@class=\"badge_row_overlay\"]").Attributes["href"].Value;
-                var appid = Regex.Match(appIdNode, @"gamecards/(\d+)/").Groups[1].Value;
-
-                if (string.IsNullOrWhiteSpace(appid) || Settings.Default.blacklist.Contains(appid) || appid == "368020" || appid == "335590" || appIdNode.Contains("border=1"))
-                {
-                    continue;
-                }
-
-                var hoursNode = badge.SelectSingleNode(".//div[@class=\"badge_title_stats_playtime\"]");
-                var hours = hoursNode == null ? string.Empty : Regex.Match(hoursNode.InnerText, @"[0-9\.,]+").Value;
-
-                var nameNode = badge.SelectSingleNode(".//div[@class=\"badge_title\"]");
-                var name = WebUtility.HtmlDecode(nameNode.FirstChild.InnerText).Trim();
-
-                var cardNode = badge.SelectSingleNode(".//span[@class=\"progress_info_bold\"]");
-                var cards = cardNode == null ? string.Empty : Regex.Match(cardNode.InnerText, @"[0-9]+").Value;
-
-                var badgeInMemory = AllBadges.FirstOrDefault(b => b.StringId == appid);
-
-                if (badgeInMemory != null)
-                {
-                    badgeInMemory.UpdateStats(cards, hours);
-                }
-                else
-                {
-                    AllBadges.Add(new Badge(appid, name, cards, hours));
-                }
-            }
-        }
-
         public async Task CheckCardDrops(Badge badge)
         {
             if (!await badge.CanCardDrops())
@@ -418,21 +254,22 @@ namespace IdleMasterExtended
             }
 
             lblCurrentRemaining.Text = badge.RemainingCard == -1 ? "" : badge.RemainingCard + " " + localization.strings.card_drops_remaining;
-            pbIdle.Maximum = CardsRemaining > pbIdle.Maximum ? CardsRemaining : pbIdle.Maximum;
-            pbIdle.Value = pbIdle.Maximum - CardsRemaining;
+            pbIdle.Maximum = BadgePageHandler.CardsRemaining > pbIdle.Maximum ? BadgePageHandler.CardsRemaining : pbIdle.Maximum;
+            pbIdle.Value = pbIdle.Maximum - BadgePageHandler.CardsRemaining;
             lblHoursPlayed.Text = badge.HoursPlayed + " " + localization.strings.hrs_on_record;
             UpdateStateInfo();
         }
 
         private void ResetRetryCountAndUpdateApplicationState()
         {
-            RetryCount = 0;
-            SortBadges(Settings.Default.sort);
+            BadgePageHandler.RetryCount = 0;
+            BadgePageHandler.SortBadges(Settings.Default.sort);
 
+            lblDrops.Text = localization.strings.sorting_results;
             picReadingPage.Visible = false;
             UpdateStateInfo();
 
-            if (CardsRemaining == 0)
+            if (BadgePageHandler.CardsRemaining == 0)
             {
                 IdleComplete();
             }
@@ -480,28 +317,28 @@ namespace IdleMasterExtended
             }
             else
             {
-                if (ReloadCount != 0)
+                if (BadgePageHandler.ReloadCount != 0)
                 {
                     return;
                 }
 
-                if (CanIdleBadges.Any())
+                if (BadgePageHandler.CanIdleBadges.Any())
                 {
                     EnableCardDropCheckTimer();
                     lblCurrentStatus.Enabled = false;
-                    statistics.setRemainingCards((uint)CardsRemaining);
+                    statistics.setRemainingCards((uint)BadgePageHandler.CardsRemaining);
                     tmrStatistics.Enabled = true;
                     tmrStatistics.Start();
 
                     if (Settings.Default.OnlyOneGameIdle)
                     {
-                        StartSoloIdle(CanIdleBadges.First());
+                        StartSoloIdle(BadgePageHandler.CanIdleBadges.First());
                     }
                     else
                     {
                         if (Settings.Default.OneThenMany)
                         {
-                            var multi = CanIdleBadges.Where(b => b.HoursPlayed >= 2);
+                            var multi = BadgePageHandler.CanIdleBadges.Where(b => b.HoursPlayed >= 2);
 
                             if (multi.Count() >= 1)
                                 StartSoloIdle(multi.First());
@@ -510,7 +347,7 @@ namespace IdleMasterExtended
                         }
                         else
                         {
-                            var multi = CanIdleBadges.Where(b => (b.HoursPlayed < 2 || Settings.Default.fastMode));
+                            var multi = BadgePageHandler.CanIdleBadges.Where(b => (b.HoursPlayed < 2 || Settings.Default.fastMode));
 
                             if (multi.Count() >= 2)
                             {
@@ -521,7 +358,7 @@ namespace IdleMasterExtended
                             }
                             else
                             {
-                                StartSoloIdle(CanIdleBadges.First());
+                                StartSoloIdle(BadgePageHandler.CanIdleBadges.First());
                             }
                         }
 
@@ -566,7 +403,7 @@ namespace IdleMasterExtended
                 Height = Convert.ToInt32(scale);
 
                 // Kill the idling process
-                foreach (var badge in AllBadges.Where(b => b.InIdle))
+                foreach (var badge in BadgePageHandler.AllBadges.Where(b => b.InIdle))
                     badge.StopIdle();
             }
             catch (Exception ex)
@@ -588,7 +425,7 @@ namespace IdleMasterExtended
             }
             else
             {
-                if (CanIdleBadges.Any())
+                if (BadgePageHandler.CanIdleBadges.Any())
                 {
                     // Give the user notification that the next game will start soon
                     lblCurrentStatus.Text = localization.strings.loading_next;
@@ -644,7 +481,7 @@ namespace IdleMasterExtended
             lblHoursPlayed.Text = CurrentBadge.HoursPlayed + " " + localization.strings.hrs_on_record;
 
             // Set progress bar values and show the footer
-            pbIdle.Maximum = CardsRemaining > pbIdle.Maximum ? CardsRemaining : pbIdle.Maximum;
+            pbIdle.Maximum = BadgePageHandler.CardsRemaining > pbIdle.Maximum ? BadgePageHandler.CardsRemaining : pbIdle.Maximum;
             ssFooter.Visible = true;
 
             // Start the animated "working" gif
@@ -726,8 +563,13 @@ namespace IdleMasterExtended
             lblIdle.Visible = lblDrops.Visible = true;
 
 
-            foreach (var badge in (CanIdleBadges.Where(b => (!Equals(b, CurrentBadge)
-                                                            && CanIdleBadges.ToList().IndexOf(b) < MaxSimultanousCards))))
+            foreach (var badge in (BadgePageHandler.CanIdleBadges
+                                                   .Where(b => (!Equals(b, CurrentBadge)
+                                                                && BadgePageHandler.CanIdleBadges.ToList().IndexOf(b) < MaxSimultanousCards)
+                                                          )
+                                   )
+                    )
+
             {
                 StartSoloIdle(badge);               // Idle current game
                 TimeLeft = 5;                       // Set the timer to 5 sec
@@ -786,27 +628,27 @@ namespace IdleMasterExtended
 
         internal void UpdateStateInfo()
         {
-            if (ReloadCount == 0)
+            if (BadgePageHandler.ReloadCount == 0)
             {
-                int numberOfCardsInIdle = CanIdleBadges.Count(b => b.InIdle);
+                int numberOfCardsInIdle = BadgePageHandler.CanIdleBadges.Count(b => b.InIdle);
 
                 lblIdle.Text = string.Format(
                     "{0} " + localization.strings.games_left_to_idle
                     + ", {1} " + localization.strings.idle_now
-                    + ".", (CardsRemaining > 0 ? GamesRemaining : numberOfCardsInIdle), numberOfCardsInIdle);
-                lblDrops.Text = CardsRemaining + " " + localization.strings.card_drops_remaining;
-                lblIdle.Visible = GamesRemaining != 0;
-                lblDrops.Visible = CardsRemaining > 0;
+                    + ".", (BadgePageHandler.CardsRemaining > 0 ? BadgePageHandler.GamesRemaining : numberOfCardsInIdle), numberOfCardsInIdle);
+                lblDrops.Text = BadgePageHandler.CardsRemaining + " " + localization.strings.card_drops_remaining;
+                lblIdle.Visible = BadgePageHandler.GamesRemaining != 0;
+                lblDrops.Visible = BadgePageHandler.CardsRemaining > 0;
             }
         }
 
         public void UpdateIdleProcesses()
         {
-            foreach (var badge in CanIdleBadges)
+            foreach (var badge in BadgePageHandler.CanIdleBadges)
             {
                 if (Settings.Default.fastMode)
                 {
-                    if (CanIdleBadges.Count(b => b.InIdle) <= MaxSimultanousCards)
+                    if (BadgePageHandler.CanIdleBadges.Count(b => b.InIdle) <= MaxSimultanousCards)
                         badge.Idle();
                 }
                 else
@@ -814,14 +656,14 @@ namespace IdleMasterExtended
                     if (badge.HoursPlayed >= 2 && badge.InIdle)
                         badge.StopIdle();
 
-                    if (badge.HoursPlayed < 2 && CanIdleBadges.Count(b => b.InIdle) <= MaxSimultanousCards)
+                    if (badge.HoursPlayed < 2 && BadgePageHandler.CanIdleBadges.Count(b => b.InIdle) <= MaxSimultanousCards)
                         badge.Idle();
                 }
             }
 
             RefreshGamesStateListView();
 
-            if (!CanIdleBadges.Any(b => b.InIdle))
+            if (!BadgePageHandler.CanIdleBadges.Any(b => b.InIdle))
                 NextIdle();
 
             UpdateStateInfo();
@@ -830,7 +672,7 @@ namespace IdleMasterExtended
         private void RefreshGamesStateListView()
         {
             GamesState.Items.Clear();
-            foreach (var badge in CanIdleBadges.Where(b => b.InIdle))
+            foreach (var badge in BadgePageHandler.CanIdleBadges.Where(b => b.InIdle))
             {
                 var line = new ListViewItem(badge.Name);
                 line.SubItems.Add(badge.HoursPlayed.ToString());
@@ -949,7 +791,7 @@ namespace IdleMasterExtended
             StopIdle();
 
             // Clear the badges list
-            AllBadges.Clear();
+            BadgePageHandler.AllBadges.Clear();
 
             // Resize the form
             var graphics = CreateGraphics();
@@ -1010,15 +852,16 @@ namespace IdleMasterExtended
                 return;
 
             StopIdle();
-            AllBadges.RemoveAll(b => Equals(b, CurrentBadge));
+            BadgePageHandler.AllBadges.RemoveAll(b => Equals(b, CurrentBadge));
 
-            if (!CanIdleBadges.Any())
+            if (!BadgePageHandler.CanIdleBadges.Any())
             {
                 // If there are no more games to idle, reload the badges
                 picReadingPage.Visible = true;
                 lblIdle.Visible = false;
                 lblDrops.Visible = true;
                 lblDrops.Text = localization.strings.reading_badge_page + ", " + localization.strings.please_wait;
+
                 await LoadBadgesAsync();
             }
 
@@ -1138,7 +981,7 @@ namespace IdleMasterExtended
                 || previousWhitelistMode != Settings.Default.IdlingModeWhitelist)
             {
                 StopIdle();
-                AllBadges.Clear();
+                BadgePageHandler.AllBadges.Clear();
                 tmrReadyToGo.Enabled = true;
             }
 
@@ -1217,21 +1060,21 @@ namespace IdleMasterExtended
         #region TIMERS
         private void tmrBadgeReload_Tick(object sender, EventArgs e)
         {
-            ReloadCount = ReloadCount + 1;
-            lblDrops.Text = localization.strings.badge_didnt_load.Replace("__num__", (10 - ReloadCount).ToString());
+            BadgePageHandler.ReloadCount = BadgePageHandler.ReloadCount + 1;
+            lblDrops.Text = localization.strings.badge_didnt_load.Replace("__num__", (10 - BadgePageHandler.ReloadCount).ToString());
 
-            if (ReloadCount == 10)
+            if (BadgePageHandler.ReloadCount == 10)
             {
                 tmrBadgeReload.Enabled = false;
                 tmrReadyToGo.Enabled = true;
-                ReloadCount = 0;
+                BadgePageHandler.ReloadCount = 0;
             }
         }
 
         private void tmrStatistics_Tick(object sender, EventArgs e)
         {
             statistics.increaseMinutesIdled();
-            statistics.checkCardRemaining((uint)CardsRemaining);
+            statistics.checkCardRemaining((uint)BadgePageHandler.CardsRemaining);
         }
 
         private void tmrStartNext_Tick(object sender, EventArgs e)
@@ -1261,6 +1104,7 @@ namespace IdleMasterExtended
             if (await CookieClient.IsLogined())
             {
                 await LoadBadgesAsync();
+
                 StartIdle();
             }
             else
@@ -1274,6 +1118,33 @@ namespace IdleMasterExtended
                     await CookieClient.RefreshLoginToken();
                 }
             }
+        }
+
+        internal async Task LoadBadgesAsync()
+        {
+            try
+            {
+                await BadgePageHandler.LoadBadgesAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger.Exception(ex, "Badge -> LoadBadgesAsync, for profile = " + Settings.Default.myProfileURL);
+                ResetFormDesign();
+                
+                BadgePageHandler.ReloadCount = 1;
+                
+                tmrBadgeReload.Enabled = true;
+
+                if (BadgePageHandler.RetryCount == BadgePageHandler.MaxRetryCount)
+                {
+                    ResetClientStatus();
+                    return;
+                }
+
+                return;
+            }
+
+            ResetRetryCountAndUpdateApplicationState();
         }
 
         private async void tmrCardDropCheck_Tick(object sender, EventArgs e)
@@ -1291,13 +1162,14 @@ namespace IdleMasterExtended
                     await CheckCardDrops(CurrentBadge);
                 }
 
-                var isMultipleIdle = CanIdleBadges.Any(b => !Equals(b, CurrentBadge) && b.InIdle);
+                var isMultipleIdle = BadgePageHandler.CanIdleBadges.Any(b => !Equals(b, CurrentBadge) && b.InIdle);
                 if (isMultipleIdle)
                 {
                     lblDrops.Visible = true;
                     lblDrops.Text = localization.strings.reading_badge_page + ", " + localization.strings.please_wait;
                     lblIdle.Visible = false;
                     picReadingPage.Visible = true;
+
                     await LoadBadgesAsync();
 
                     // If the fast mode is enabled, switch from simultaneous idling to individual idling
@@ -1310,7 +1182,7 @@ namespace IdleMasterExtended
                     {
                         UpdateIdleProcesses();
 
-                        isMultipleIdle = CanIdleBadges.Any(b => b.HoursPlayed < 2 && b.InIdle);
+                        isMultipleIdle = BadgePageHandler.CanIdleBadges.Any(b => b.HoursPlayed < 2 && b.InIdle);
                         if (isMultipleIdle)
                             TimeLeft = 360;
                     }
@@ -1318,7 +1190,7 @@ namespace IdleMasterExtended
 
                 // Check if user is authenticated and if any badge left to idle
                 // There should be check for IsCookieReady, but property is set in timer tick, so it could take some time to be set.
-                if (!string.IsNullOrWhiteSpace(Settings.Default.sessionid) && IsSteamReady && CanIdleBadges.Any() && TimeLeft != 0)
+                if (!string.IsNullOrWhiteSpace(Settings.Default.sessionid) && IsSteamReady && BadgePageHandler.CanIdleBadges.Any() && TimeLeft != 0)
                 {
                     EnableCardDropCheckTimer();
                 }
