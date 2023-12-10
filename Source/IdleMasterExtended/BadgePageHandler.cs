@@ -12,13 +12,17 @@ namespace IdleMasterExtended
 {
     static internal class BadgePageHandler
     {
+        /// <summary>
+        /// Static utility class to handle the Steam badge page contents. Stores all the current user's badges (in `List<Badge>` AllBadges).
+        /// </summary>
+
+        internal const int MaxRetryCount = 18;
         internal static int RetryCount = 0;
         internal static int ReloadCount = 0;
-        
-        internal const int MaxRetryCount = 18;
 
         internal static List<Badge> AllBadges { get; set; }
-
+        internal static int CardsRemaining { get { return CanIdleBadges.Sum(b => b.RemainingCard); } }
+        internal static int GamesRemaining { get { return CanIdleBadges.Count(); } }
         internal static IEnumerable<Badge> CanIdleBadges
         {
             get
@@ -28,40 +32,25 @@ namespace IdleMasterExtended
             }
         }
 
-        internal static int CardsRemaining { get { return CanIdleBadges.Sum(b => b.RemainingCard); } }
+        private const string NodePageLink = "//a[@class=\"pagelink\"]";
+        private const string NodeBadgeRowOverlay = ".//a[@class=\"badge_row_overlay\"]";
+        private const string NodeBadgeRowIsLink = "//div[@class=\"badge_row is_link\"]";
+        private const string NodeBadgeTitleStats = ".//div[@class=\"badge_title_stats_playtime\"]";
+        private const string NodeBadgeTitle = ".//div[@class=\"badge_title\"]";
+        private const string NodeProgressInfo = ".//span[@class=\"progress_info_bold\"]";
 
-        internal static int GamesRemaining { get { return CanIdleBadges.Count(); } }
+        private const string IgnoredAppIdNode = "border=1";
+        private static readonly string[] IgnoredAppIds = { "368020", "335590" };
 
-        internal static void SortBadges(string method)
-        {
-            switch (method)
-            {
-                case "mostcards":
-                    AllBadges = AllBadges.OrderByDescending(b => b.RemainingCard).ToList();
-                    break;
-                case "leastcards":
-                    AllBadges = AllBadges.OrderBy(b => b.RemainingCard).ToList();
-                    break;
-                default:
-                    return;
-            }
-        }
-
+        /// <summary>
+        /// Asynchronously load the HTML-page(s) with the Steam game badges and extract the badge information (time spent, cards remaining, etc.)
+        /// </summary>
+        /// <returns></returns>
         internal static async Task LoadBadgesAsync()
         {
             if (Settings.Default.IdlingModeWhitelist)
             {
-                AllBadges.Clear();
-
-                foreach (var whitelistID in Settings.Default.whitelist)
-                {
-                    int applicationID;
-                    if (int.TryParse(whitelistID, out applicationID)
-                        && !AllBadges.Any(badge => badge.AppId.Equals(applicationID)))
-                    {
-                        AllBadges.Add(new Badge(whitelistID, "App ID: " + whitelistID, "-1", "0"));
-                    }
-                }
+                SetWhitelistAsAllBadges();
             }
             else
             {
@@ -76,10 +65,28 @@ namespace IdleMasterExtended
                         totalBadgePages = ExtractTotalBadgePages(htmlDocument);
                     }
 
-                    //lblDrops.Text = string.Format(localization.strings.reading_badge_page + " {0}/{1}, " + localization.strings.please_wait, currentBadgePage, totalBadgePages);
                     htmlDocument = await GetBadgePageAsync(currentBadgePage);
                     ProcessBadgesOnPage(htmlDocument);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Sort the active badges to be idled by the preferred method provided (e.g. "mostcards" or "leastcards")
+        /// </summary>
+        /// <param name="method"></param>
+        internal static void SortBadges(string method)
+        {
+            switch (method)
+            {
+                case "mostcards":
+                    AllBadges = AllBadges.OrderByDescending(b => b.RemainingCard).ToList();
+                    break;
+                case "leastcards":
+                    AllBadges = AllBadges.OrderBy(b => b.RemainingCard).ToList();
+                    break;
+                default:
+                    return;
             }
         }
 
@@ -97,9 +104,9 @@ namespace IdleMasterExtended
 
         private static void CheckIfResponseIsNullWithRetryCount(string response)
         {
-            // Response should be empty. User should be unauthorised.
             if (string.IsNullOrEmpty(response))
             {
+                // User should be unauthorised.
                 RetryCount++;
                 throw new Exception("Response is null or empty. Added (+1) to RetryCount");
             }
@@ -108,8 +115,10 @@ namespace IdleMasterExtended
         private static int ExtractTotalBadgePages(HtmlDocument document)
         {
             // If user is authenticated, check page count. If user is not authenticated, pages are different.
+            
             var pages = new List<string>() { "?p=1" };
-            var pageNodes = document.DocumentNode.SelectNodes("//a[@class=\"pagelink\"]");
+            var pageNodes = document.DocumentNode.SelectNodes(NodePageLink);
+            
             if (pageNodes != null)
             {
                 pages.AddRange(pageNodes.Select(p => p.Attributes["href"].Value).Distinct());
@@ -123,23 +132,23 @@ namespace IdleMasterExtended
 
         private static void ProcessBadgesOnPage(HtmlDocument document)
         {
-            foreach (var badge in document.DocumentNode.SelectNodes("//div[@class=\"badge_row is_link\"]"))
+            foreach (var badge in document.DocumentNode.SelectNodes(NodeBadgeRowIsLink))
             {
-                var appIdNode = badge.SelectSingleNode(".//a[@class=\"badge_row_overlay\"]").Attributes["href"].Value;
+                var appIdNode = badge.SelectSingleNode(NodeBadgeRowOverlay).Attributes["href"].Value;
                 var appid = Regex.Match(appIdNode, @"gamecards/(\d+)/").Groups[1].Value;
 
-                if (string.IsNullOrWhiteSpace(appid) || Settings.Default.blacklist.Contains(appid) || appid == "368020" || appid == "335590" || appIdNode.Contains("border=1"))
+                if (string.IsNullOrWhiteSpace(appid) || Settings.Default.blacklist.Contains(appid) || IgnoredAppIds.Contains(appid) || appIdNode.Contains(IgnoredAppIdNode))
                 {
                     continue;
                 }
 
-                var hoursNode = badge.SelectSingleNode(".//div[@class=\"badge_title_stats_playtime\"]");
+                var hoursNode = badge.SelectSingleNode(NodeBadgeTitleStats);
                 var hours = hoursNode == null ? string.Empty : Regex.Match(hoursNode.InnerText, @"[0-9\.,]+").Value;
 
-                var nameNode = badge.SelectSingleNode(".//div[@class=\"badge_title\"]");
+                var nameNode = badge.SelectSingleNode(NodeBadgeTitle);
                 var name = WebUtility.HtmlDecode(nameNode.FirstChild.InnerText).Trim();
 
-                var cardNode = badge.SelectSingleNode(".//span[@class=\"progress_info_bold\"]");
+                var cardNode = badge.SelectSingleNode(NodeProgressInfo);
                 var cards = cardNode == null ? string.Empty : Regex.Match(cardNode.InnerText, @"[0-9]+").Value;
 
                 var badgeInMemory = AllBadges.FirstOrDefault(b => b.StringId == appid);
@@ -151,6 +160,21 @@ namespace IdleMasterExtended
                 else
                 {
                     AllBadges.Add(new Badge(appid, name, cards, hours));
+                }
+            }
+        }
+
+        private static void SetWhitelistAsAllBadges()
+        {
+            AllBadges.Clear();
+
+            foreach (var whitelistID in Settings.Default.whitelist)
+            {
+                int applicationID;
+                if (int.TryParse(whitelistID, out applicationID)
+                    && !AllBadges.Any(badge => badge.AppId.Equals(applicationID)))
+                {
+                    AllBadges.Add(new Badge(whitelistID, "App ID: " + whitelistID, "-1", "0"));
                 }
             }
         }
