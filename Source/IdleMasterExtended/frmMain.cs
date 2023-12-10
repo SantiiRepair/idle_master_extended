@@ -28,12 +28,28 @@ namespace IdleMasterExtended
 
         private const int MaxSimultanousCards = 30;
 
-        private const int FifteenMinutes = 900;
-        private const int FiveMinutes = 300;
-        private int TimeLeft = FifteenMinutes;
+        private const double BaseHeightFactor = 1.625;
+        private const double PausedHeightFactor = 2.000;
+
+
+        private const int FifteenMinutesInSeconds = 900;
+        private const int SixMinutesInSecondes = 360;
+        private const int FiveMinutesInSeconds = 300;
+        
+        private const int FiveSecondsInMillisec = 500;
+        private const int FiftySecondsInMillisec = 5000;
+        
+        private int ActiveTimeLeft = FifteenMinutesInSeconds;
 
         private bool IsCookieReady;
         private bool IsSteamReady;
+
+        private const string UrlGitHubReleases = "https://github.com/JonasNilson/idle_master_extended/releases";
+        private const string UrlApiGitHubReleases = "https://api.github.com/repos/JonasNilson/idle_master_extended/releases/latest";
+        private const string UrlSteamCommunityGroup = "https://steamcommunity.com/groups/idlemastery";
+        private const string UrlGitHubWikiDonate = "https://github.com/JonasNilson/idle_master_extended/wiki/Donate";
+        private const string UrlGitHubWiki = "https://github.com/JonasNilson/idle_master_extended/wiki";
+
 
         public FrmMain()
         {
@@ -49,166 +65,33 @@ namespace IdleMasterExtended
             lblDrops.Text = localization.strings.badge_didnt_load.Replace("__num__", "10");
             lblIdle.Text = "";
 
-            // Set the form height
-            var graphics = CreateGraphics();
-            var scale = graphics.DpiY * 1.625;
-            Height = Convert.ToInt32(scale);
+            SetFormHeight(BaseHeightFactor);
             ssFooter.Visible = false;
         }
 
         private void FrmMain_Load(object sender, EventArgs e)
         {
-            // Update the settings, if needed.  When the application updates, settings will persist.
             if (Settings.Default.updateNeeded)
             {
+                // Update the settings, if needed.  When the application updates, settings will persist.
                 Settings.Default.Upgrade();
                 Settings.Default.updateNeeded = false;
                 Settings.Default.Save();
             }
 
-            // Set the interface language from the settings
-            if (Settings.Default.language != "")
-            {
-                string language_string = "";
-                switch (Settings.Default.language)
-                {
-                    case "Bulgarian":
-                        language_string = "bg";
-                        break;
-                    case "Chinese (Simplified, China)":
-                        language_string = "zh-CN";
-                        break;
-                    case "Chinese (Traditional, China)":
-                        language_string = "zh-TW";
-                        break;
-                    case "Czech":
-                        language_string = "cs";
-                        break;
-                    case "Danish":
-                        language_string = "da";
-                        break;
-                    case "Dutch":
-                        language_string = "nl";
-                        break;
-                    case "English":
-                        language_string = "en";
-                        break;
-                    case "Finnish":
-                        language_string = "fi";
-                        break;
-                    case "French":
-                        language_string = "fr";
-                        break;
-                    case "German":
-                        language_string = "de";
-                        break;
-                    case "Greek":
-                        language_string = "el";
-                        break;
-                    case "Hungarian":
-                        language_string = "hu";
-                        break;
-                    case "Italian":
-                        language_string = "it";
-                        break;
-                    case "Japanese":
-                        language_string = "ja";
-                        break;
-                    case "Korean":
-                        language_string = "ko";
-                        break;
-                    case "Norwegian":
-                        language_string = "no";
-                        break;
-                    case "Polish":
-                        language_string = "pl";
-                        break;
-                    case "Portuguese":
-                        language_string = "pt-PT";
-                        break;
-                    case "Portuguese (Brazil)":
-                        language_string = "pt-BR";
-                        break;
-                    case "Romanian":
-                        language_string = "ro";
-                        break;
-                    case "Russian":
-                        language_string = "ru";
-                        break;
-                    case "Spanish":
-                        language_string = "es";
-                        break;
-                    case "Swedish":
-                        language_string = "sv";
-                        break;
-                    case "Thai":
-                        language_string = "th";
-                        break;
-                    case "Turkish":
-                        language_string = "tr";
-                        break;
-                    case "Ukrainian":
-                        language_string = "uk";
-                        break;
-                    case "Croatian":
-                        language_string = "hr";
-                        break;
-                    default:
-                        language_string = "en";
-                        break;
-                }
-                Thread.CurrentThread.CurrentUICulture = new CultureInfo(language_string);
-            }
+            ThemeHandler.SetTheme(this, Settings.Default.customTheme);
 
-            // Localize form elements
-            fileToolStripMenuItem.Text = localization.strings.file;
-            gameToolStripMenuItem.Text = localization.strings.game;
-            helpToolStripMenuItem.Text = localization.strings.help;
-            settingsToolStripMenuItem.Text = localization.strings.settings;
-            blacklistToolStripMenuItem.Text = localization.strings.blacklist;
-            exitToolStripMenuItem.Text = localization.strings.exit;
-            pauseIdlingToolStripMenuItem.Text = localization.strings.pause_idling;
-            resumeIdlingToolStripMenuItem.Text = localization.strings.resume_idling;
-            skipGameToolStripMenuItem.Text = localization.strings.skip_current_game;
-            blacklistCurrentGameToolStripMenuItem.Text = localization.strings.blacklist_current_game;
-            statisticsToolStripMenuItem.Text = localization.strings.statistics;
-            changelogToolStripMenuItem.Text = localization.strings.release_notes;
-            officialGroupToolStripMenuItem.Text = localization.strings.official_group;
-            aboutToolStripMenuItem.Text = localization.strings.about;
-            lnkSignIn.Text = "(" + localization.strings.sign_in + ")";
-            lnkResetCookies.Text = "(" + localization.strings.sign_out + ")";
-            // TODO: lnkLatestRelease = "(" + localization.strings.latest_release + ")";
-            toolStripStatusLabel1.Text = localization.strings.next_check;
-            toolStripStatusLabel1.ToolTipText = localization.strings.next_check;
-
-            lblSignedOnAs.Text = localization.strings.signed_in_as;
-            GamesState.Columns[0].Text = localization.strings.name;
-            GamesState.Columns[1].Text = localization.strings.hours;
-
-            // Set the form height
-            var graphics = CreateGraphics();
-            var scale = graphics.DpiY * 1.625;
-            Height = Convert.ToInt32(scale);
-
-            // Set the location of certain elements so that they scale correctly for different DPI settings
-            var point = new Point(Convert.ToInt32(graphics.DpiX * 1.14), Convert.ToInt32(lblGameName.Location.Y));
-            lblGameName.Location = point;
-            point = new Point(Convert.ToInt32(graphics.DpiX * 2.35), Convert.ToInt32(lnkSignIn.Location.Y));
-            lnkSignIn.Location = point;
-            point = new Point(Convert.ToInt32(graphics.DpiX * 2.15), Convert.ToInt32(lnkResetCookies.Location.Y));
-            lnkResetCookies.Location = point;
-            point = new Point(Convert.ToInt32(graphics.DpiX * 2.15), Convert.ToInt32(lnkLatestRelease.Location.Y));
-            lnkLatestRelease.Location = point;
-
-            ThemeHandler.SetTheme(this, Properties.Settings.Default.customTheme);
+            SetInterfaceLanguage();
+            LocalizeFormElements();
+            SetDefaultFormSize();
             GetLatestVersion();
 
-            //Prevent Sleep
             if (Settings.Default.NoSleep)
             {
                 PreventSleep();
             }
         }
+
 
         private void FrmMain_FormClose(object sender, FormClosedEventArgs e)
         {
@@ -250,7 +133,7 @@ namespace IdleMasterExtended
             else
             {
                 // Resets the clock based on the number of remaining drops
-                TimeLeft = badge.RemainingCard == 1 ? FiveMinutes : FifteenMinutes;
+                ActiveTimeLeft = badge.RemainingCard == 1 ? FiveMinutesInSeconds : FifteenMinutesInSeconds;
             }
 
             lblCurrentRemaining.Text = badge.RemainingCard == -1 ? "" : badge.RemainingCard + " " + localization.strings.card_drops_remaining;
@@ -398,9 +281,7 @@ namespace IdleMasterExtended
                 ssFooter.Visible = false;
 
                 // Resize the form
-                var graphics = CreateGraphics();
-                var scale = graphics.DpiY * 2.000;
-                Height = Convert.ToInt32(scale);
+                SetFormHeight(PausedHeightFactor);
 
                 // Kill the idling process
                 foreach (var badge in BadgePageHandler.AllBadges.Where(b => b.InIdle))
@@ -491,7 +372,7 @@ namespace IdleMasterExtended
             EnableCardDropCheckTimer();
 
             // Reset the timer
-            TimeLeft = CurrentBadge.RemainingCard == 1 ? FiveMinutes : FifteenMinutes;
+            ActiveTimeLeft = CurrentBadge.RemainingCard == 1 ? FiveMinutesInSeconds : FifteenMinutesInSeconds;
 
             // Set the correct buttons on the form for pause / resume
             ShowInterruptiveButtons();
@@ -522,7 +403,7 @@ namespace IdleMasterExtended
             EnableCardDropCheckTimer();
 
             // Reset the timer
-            TimeLeft = 360;
+            ActiveTimeLeft = SixMinutesInSecondes;
 
             // Show game
             GamesState.Visible = true;
@@ -542,7 +423,7 @@ namespace IdleMasterExtended
         {
             CurrentBadge = null;
             StartMultipleIdle();
-            TimeLeft = 5 * 60;
+            ActiveTimeLeft = FiveMinutesInSeconds;
         }
 
         /// <summary>
@@ -558,7 +439,7 @@ namespace IdleMasterExtended
             lblDrops.Visible = picReadingPage.Visible = true;
             lblIdle.Visible = false;
 
-            await Task.Delay(5 * 1000);
+            await Task.Delay(FiveSecondsInMillisec);
             picReadingPage.Visible = false;
             lblIdle.Visible = lblDrops.Visible = true;
 
@@ -571,23 +452,23 @@ namespace IdleMasterExtended
                     )
 
             {
-                StartSoloIdle(badge);               // Idle current game
-                TimeLeft = 5;                       // Set the timer to 5 sec
-                UpdateStateInfo();                  // Update information labels
-                await Task.Delay(TimeLeft * 1000);  // Wait 5 sec
+                StartSoloIdle(badge);                     // Idle current game
+                ActiveTimeLeft = 5;                       // Set the timer to 5 sec
+                UpdateStateInfo();                        // Update information labels
+                await Task.Delay(FiveSecondsInMillisec);  // Wait 5 sec
 
                 if (!tmrCardDropCheck.Enabled)
                 {
-                    paused = true;                  // The pause button has been triggered
-                    break;                          // Breaks the loop to "pause" (cancel) idling
+                    paused = true;                        // The pause button has been triggered
+                    break;                                // Breaks the loop to "pause" (cancel) idling
                 }
 
-                StopIdle();                         // Stop idling before moving on to the next game
+                StopIdle();                               // Stop idling before moving on to the next game
             }
             
             if (!paused)
             {
-                StartMultipleIdleFastMode();        // Start the simultaneous idling
+                StartMultipleIdleFastMode();              // Start the simultaneous idling
             }
         }
 
@@ -602,10 +483,7 @@ namespace IdleMasterExtended
             btnSkip.Visible = true;
             // TODO: Refresh button?
 
-            // Resize the form
-            var graphics = CreateGraphics();
-            var scale = graphics.DpiY * 2.000;
-            Height = Convert.ToInt32(scale);
+            SetFormHeight(PausedHeightFactor);
 
             if (Settings.Default.ShutdownWindowsOnDone)
             {
@@ -709,21 +587,6 @@ namespace IdleMasterExtended
             CreateShutdownProcess("/s /c \"Idle Master Extended is about to shutdown Windows.\" /t 300");
         }
 
-        private void CopyResource(string resourceName, string file)
-        {
-            using (var resource = GetType().Assembly.GetManifestResourceStream(resourceName))
-            {
-                if (resource == null)
-                {
-                    return;
-                }
-                using (Stream output = File.OpenWrite(file))
-                {
-                    resource.CopyTo(output);
-                }
-            }
-        }
-
         private void GetLatestVersion()
         {
             ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
@@ -731,7 +594,7 @@ namespace IdleMasterExtended
             webClient.Headers.Add("user-agent", "Idle Master Extended application");
             webClient.Encoding = Encoding.UTF8;
 
-            string jsonResponse = webClient.DownloadString("https://api.github.com/repos/JonasNilson/idle_master_extended/releases/latest");
+            string jsonResponse = webClient.DownloadString(UrlApiGitHubReleases);
             string githubReleaseTagKey = "tag_name";
 
             if (jsonResponse.Contains(githubReleaseTagKey))
@@ -787,39 +650,23 @@ namespace IdleMasterExtended
             Settings.Default.steamparental = string.Empty;
             Settings.Default.Save();
 
-            // Stop the steam-idle process
             StopIdle();
-
-            // Clear the badges list
             BadgePageHandler.AllBadges.Clear();
+            SetFormHeight(BaseHeightFactor);
+            tmrCheckSteam.Interval = FiveSecondsInMillisec;
+            tmrCheckCookieData.Interval = FiveSecondsInMillisec;
 
-            // Resize the form
-            var graphics = CreateGraphics();
-            var scale = graphics.DpiY * 1.625;
-            Height = Convert.ToInt32(scale);
-
-            // Set timer intervals
-            tmrCheckSteam.Interval = 500;
-            tmrCheckCookieData.Interval = 500;
-
-            // Hide signed user name
             if (Settings.Default.showUsername)
             {
                 lblSignedOnAs.Text = String.Empty;
                 lblSignedOnAs.Visible = false;
             }
 
-            // Hide spinners
             picReadingPage.Visible = false;
-
-            // Hide lblDrops and lblIdle
             lblDrops.Visible = false;
             lblIdle.Visible = false;
-
-            // Set IsCookieReady to false
             IsCookieReady = false;
 
-            // Re-enable tmrReadyToGo
             tmrReadyToGo.Enabled = true;
         }
         #endregion
@@ -938,7 +785,7 @@ namespace IdleMasterExtended
         }
         private void changelogToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Process.Start("https://github.com/JonasNilson/idle_master_extended/releases");
+            Process.Start(UrlGitHubReleases);
         }
 
         private void statisticsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -949,17 +796,17 @@ namespace IdleMasterExtended
 
         private void officialGroupToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Process.Start("https://steamcommunity.com/groups/idlemastery");
+            Process.Start(UrlSteamCommunityGroup);
         }
 
         private void donateToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Process.Start("https://github.com/JonasNilson/idle_master_extended/wiki/Donate");
+            Process.Start(UrlGitHubWikiDonate);
         }
 
         private void wikiToolStripMenuItem_Click(object sender, EventArgs e)
         {
-            Process.Start("https://github.com/JonasNilson/idle_master_extended/wiki");
+            Process.Start(UrlGitHubWiki);
         }
 
         private void settingsToolStripMenuItem_Click(object sender, EventArgs e)
@@ -1034,9 +881,9 @@ namespace IdleMasterExtended
 
         private void lblCurrentRemaining_Click(object sender, EventArgs e)
         {
-            if (TimeLeft > 2)
+            if (ActiveTimeLeft > 2)
             {
-                TimeLeft = 2;
+                ActiveTimeLeft = 2;
             }
         }
 
@@ -1053,11 +900,50 @@ namespace IdleMasterExtended
 
         private void lnkLatestRelease_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            Process.Start("https://github.com/JonasNilson/idle_master_extended/releases");
+            Process.Start(UrlGitHubReleases);
         }
         #endregion
 
         #region TIMERS
+        internal async Task LoadBadgesAsync()
+        {
+            try
+            {
+                await BadgePageHandler.LoadBadgesAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger.Exception(ex, "Badge -> LoadBadgesAsync, for profile = " + Settings.Default.myProfileURL);
+                ResetFormDesign();
+
+                BadgePageHandler.ReloadCount = 1;
+
+                tmrBadgeReload.Enabled = true;
+
+                if (BadgePageHandler.RetryCount == BadgePageHandler.MaxRetryCount)
+                {
+                    ResetClientStatus();
+                    return;
+                }
+
+                return;
+            }
+
+            ResetRetryCountAndUpdateApplicationState();
+        }
+
+        internal void EnableCardDropCheckTimer()
+        {
+            tmrCardDropCheck.Start();
+            toolStripStatusLabel1.Visible = lblTimer.Visible = true;
+        }
+
+        internal void DisableCardDropCheckTimer()
+        {
+            tmrCardDropCheck.Stop();
+            toolStripStatusLabel1.Visible = lblTimer.Visible = false;
+        }
+
         private void tmrBadgeReload_Tick(object sender, EventArgs e)
         {
             BadgePageHandler.ReloadCount = BadgePageHandler.ReloadCount + 1;
@@ -1120,40 +1006,13 @@ namespace IdleMasterExtended
             }
         }
 
-        internal async Task LoadBadgesAsync()
-        {
-            try
-            {
-                await BadgePageHandler.LoadBadgesAsync();
-            }
-            catch (Exception ex)
-            {
-                Logger.Exception(ex, "Badge -> LoadBadgesAsync, for profile = " + Settings.Default.myProfileURL);
-                ResetFormDesign();
-                
-                BadgePageHandler.ReloadCount = 1;
-                
-                tmrBadgeReload.Enabled = true;
-
-                if (BadgePageHandler.RetryCount == BadgePageHandler.MaxRetryCount)
-                {
-                    ResetClientStatus();
-                    return;
-                }
-
-                return;
-            }
-
-            ResetRetryCountAndUpdateApplicationState();
-        }
-
         private async void tmrCardDropCheck_Tick(object sender, EventArgs e)
         {
             if (Settings.Default.IdlingModeWhitelist)
             {
                 DisableCardDropCheckTimer();
             }
-            else if (TimeLeft <= 0)
+            else if (ActiveTimeLeft <= 0)
             {
                 DisableCardDropCheckTimer();
                 if (CurrentBadge != null)
@@ -1184,13 +1043,13 @@ namespace IdleMasterExtended
 
                         isMultipleIdle = BadgePageHandler.CanIdleBadges.Any(b => b.HoursPlayed < 2 && b.InIdle);
                         if (isMultipleIdle)
-                            TimeLeft = 360;
+                            ActiveTimeLeft = SixMinutesInSecondes;
                     }
                 }
 
                 // Check if user is authenticated and if any badge left to idle
                 // There should be check for IsCookieReady, but property is set in timer tick, so it could take some time to be set.
-                if (!string.IsNullOrWhiteSpace(Settings.Default.sessionid) && IsSteamReady && BadgePageHandler.CanIdleBadges.Any() && TimeLeft != 0)
+                if (!string.IsNullOrWhiteSpace(Settings.Default.sessionid) && IsSteamReady && BadgePageHandler.CanIdleBadges.Any() && ActiveTimeLeft != 0)
                 {
                     EnableCardDropCheckTimer();
                 }
@@ -1201,8 +1060,8 @@ namespace IdleMasterExtended
             }
             else
             {
-                TimeLeft = TimeLeft - 1;
-                lblTimer.Text = TimeSpan.FromSeconds(TimeLeft).ToString(@"mm\:ss");
+                ActiveTimeLeft = ActiveTimeLeft - 1;
+                lblTimer.Text = TimeSpan.FromSeconds(ActiveTimeLeft).ToString(@"mm\:ss");
             }
         }
 
@@ -1244,7 +1103,7 @@ namespace IdleMasterExtended
                     : localization.strings.steam_running)
                 : localization.strings.steam_notrunning;
 
-            tmrCheckSteam.Interval = isSteamRunning ? 5000 : 500;
+            tmrCheckSteam.Interval = isSteamRunning ? FiftySecondsInMillisec : FiveSecondsInMillisec;
 
             skipGameToolStripMenuItem.Enabled = isSteamRunning;
             pauseIdlingToolStripMenuItem.Enabled = isSteamRunning;
@@ -1254,19 +1113,156 @@ namespace IdleMasterExtended
             ThemeHandler.ToggleStatusIcon(picSteamStatus, isSteamRunning, Settings.Default.customTheme);
             ThemeHandler.ToggleStatusLabelColor(lblSteamStatus, isSteamRunning, Settings.Default.customTheme);
         }
-
-        public void DisableCardDropCheckTimer()
-        {
-            tmrCardDropCheck.Stop();
-            toolStripStatusLabel1.Visible = lblTimer.Visible = false;
-        }
-
-        public void EnableCardDropCheckTimer()
-        {
-            tmrCardDropCheck.Start();
-            toolStripStatusLabel1.Visible = lblTimer.Visible = true;
-        }
         #endregion
+
+        private Graphics SetFormHeight(double dpiFactor)
+        {
+            var graphics = CreateGraphics();
+            var scale = graphics.DpiY * dpiFactor;
+            Height = Convert.ToInt32(scale);
+
+            return graphics;
+        }
+
+        private void SetDefaultFormSize()
+        {
+            // Set the form height
+            Graphics graphics = SetFormHeight(BaseHeightFactor);
+
+            // Set the location of certain elements so that they scale correctly for different DPI settings
+            var point = new Point(Convert.ToInt32(graphics.DpiX * 1.14), Convert.ToInt32(lblGameName.Location.Y));
+            lblGameName.Location = point;
+            point = new Point(Convert.ToInt32(graphics.DpiX * 2.35), Convert.ToInt32(lnkSignIn.Location.Y));
+            lnkSignIn.Location = point;
+            point = new Point(Convert.ToInt32(graphics.DpiX * 2.15), Convert.ToInt32(lnkResetCookies.Location.Y));
+            lnkResetCookies.Location = point;
+            point = new Point(Convert.ToInt32(graphics.DpiX * 2.15), Convert.ToInt32(lnkLatestRelease.Location.Y));
+            lnkLatestRelease.Location = point;
+        }
+
+        private void LocalizeFormElements()
+        {
+            fileToolStripMenuItem.Text = localization.strings.file;
+            gameToolStripMenuItem.Text = localization.strings.game;
+            helpToolStripMenuItem.Text = localization.strings.help;
+            settingsToolStripMenuItem.Text = localization.strings.settings;
+            blacklistToolStripMenuItem.Text = localization.strings.blacklist;
+            exitToolStripMenuItem.Text = localization.strings.exit;
+            pauseIdlingToolStripMenuItem.Text = localization.strings.pause_idling;
+            resumeIdlingToolStripMenuItem.Text = localization.strings.resume_idling;
+            skipGameToolStripMenuItem.Text = localization.strings.skip_current_game;
+            blacklistCurrentGameToolStripMenuItem.Text = localization.strings.blacklist_current_game;
+            statisticsToolStripMenuItem.Text = localization.strings.statistics;
+            changelogToolStripMenuItem.Text = localization.strings.release_notes;
+            officialGroupToolStripMenuItem.Text = localization.strings.official_group;
+            aboutToolStripMenuItem.Text = localization.strings.about;
+            lnkSignIn.Text = "(" + localization.strings.sign_in + ")";
+            lnkResetCookies.Text = "(" + localization.strings.sign_out + ")";
+            // TODO: lnkLatestRelease = "(" + localization.strings.latest_release + ")";
+            toolStripStatusLabel1.Text = localization.strings.next_check;
+            toolStripStatusLabel1.ToolTipText = localization.strings.next_check;
+
+            lblSignedOnAs.Text = localization.strings.signed_in_as;
+            GamesState.Columns[0].Text = localization.strings.name;
+            GamesState.Columns[1].Text = localization.strings.hours;
+        }
+
+        private static void SetInterfaceLanguage()
+        {
+            if (Settings.Default.language != "")
+            {
+                string language_string = "";
+                switch (Settings.Default.language)
+                {
+                    case "Bulgarian":
+                        language_string = "bg";
+                        break;
+                    case "Chinese (Simplified, China)":
+                        language_string = "zh-CN";
+                        break;
+                    case "Chinese (Traditional, China)":
+                        language_string = "zh-TW";
+                        break;
+                    case "Czech":
+                        language_string = "cs";
+                        break;
+                    case "Danish":
+                        language_string = "da";
+                        break;
+                    case "Dutch":
+                        language_string = "nl";
+                        break;
+                    case "English":
+                        language_string = "en";
+                        break;
+                    case "Finnish":
+                        language_string = "fi";
+                        break;
+                    case "French":
+                        language_string = "fr";
+                        break;
+                    case "German":
+                        language_string = "de";
+                        break;
+                    case "Greek":
+                        language_string = "el";
+                        break;
+                    case "Hungarian":
+                        language_string = "hu";
+                        break;
+                    case "Italian":
+                        language_string = "it";
+                        break;
+                    case "Japanese":
+                        language_string = "ja";
+                        break;
+                    case "Korean":
+                        language_string = "ko";
+                        break;
+                    case "Norwegian":
+                        language_string = "no";
+                        break;
+                    case "Polish":
+                        language_string = "pl";
+                        break;
+                    case "Portuguese":
+                        language_string = "pt-PT";
+                        break;
+                    case "Portuguese (Brazil)":
+                        language_string = "pt-BR";
+                        break;
+                    case "Romanian":
+                        language_string = "ro";
+                        break;
+                    case "Russian":
+                        language_string = "ru";
+                        break;
+                    case "Spanish":
+                        language_string = "es";
+                        break;
+                    case "Swedish":
+                        language_string = "sv";
+                        break;
+                    case "Thai":
+                        language_string = "th";
+                        break;
+                    case "Turkish":
+                        language_string = "tr";
+                        break;
+                    case "Ukrainian":
+                        language_string = "uk";
+                        break;
+                    case "Croatian":
+                        language_string = "hr";
+                        break;
+                    default:
+                        language_string = "en";
+                        break;
+                }
+                Thread.CurrentThread.CurrentUICulture = new CultureInfo(language_string);
+            }
+        }
+
     }
 }
 
