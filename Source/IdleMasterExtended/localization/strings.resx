@@ -350,4 +350,7 @@ your Steam account.</value>
   <data name="whitelist" xml:space="preserve">
     <value>&amp;Whitelist</value>
   </data>
+  <data name="checking" xml:space="preserve">
+    <value>Checking....</value>
+  </data>
 </root>

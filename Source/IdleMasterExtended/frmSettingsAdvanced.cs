@@ -149,6 +149,42 @@ namespace IdleMasterExtended
             btnUpdate.Enabled = true;
         }
 
+
+        private async Task GetCookies()
+        {
+            try
+            {
+                byte[] masterKey = new byte[0];
+                BrowserType[] browsers = new BrowserType[] { BrowserType.Chrome, BrowserType.MSEdge };
+
+                var chromiumCookie = new ChromiumCookie();
+                foreach (BrowserType browserType in browsers)
+                {
+                    var userDataDir = chromiumCookie.GetUserDataPath(browserType);
+                    chromiumCookie.GetProfilesOf(userDataDir).ForEach(profileDir =>
+                    {
+                        if (chromiumCookie.ResolveCookiePath(profileDir))
+                        {
+                            chromiumCookie.Extract(masterKey);
+                            if (chromiumCookie.Len() > 0)
+                            {
+                                Debug.WriteLine(chromiumCookie.Cookies);
+                                return;
+                                Settings.Default.steamLoginSecure = txtSteamLoginSecure.Text.Trim();
+                                Settings.Default.myProfileURL = SteamProfile.GetSteamUrl();
+                                Settings.Default.steamparental = txtSteamParental.Text.Trim();
+                            }
+                        }
+
+                    });
+
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Exception(ex, "frmSettingsAdvanced -> GetCookies");
+            }
+        }
         private async void btnUpdate_Click(object sender, EventArgs e)
         {
             btnUpdate.Enabled = false;
@@ -158,6 +194,19 @@ namespace IdleMasterExtended
 
             btnUpdate.Text = localization.strings.validating;
 
+            await CheckAndSave();
+        }
+
+        private async void btnQuickLogin_Click(object sender, EventArgs e)
+        {
+            btnQuickLogin.Enabled = false;
+            txtSessionID.Enabled = false;
+            txtSteamLoginSecure.Enabled = false;
+            txtSteamParental.Enabled = false;
+
+            btnQuickLogin.Text = localization.strings.checking;
+
+            await GetCookies();
             await CheckAndSave();
         }
 

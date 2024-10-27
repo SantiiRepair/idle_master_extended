@@ -169,6 +169,15 @@ namespace IdleMasterExtended.localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Checking.....
+        /// </summary>
+        internal static string checking {
+            get {
+                return ResourceManager.GetString("checking", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Display information above
         ///
         ///[WARNING]
