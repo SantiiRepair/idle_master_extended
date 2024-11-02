@@ -353,4 +353,10 @@ your Steam account.</value>
   <data name="checking" xml:space="preserve">
     <value>Checking....</value>
   </data>
+  <data name="confirmation" xml:space="preserve">
+    <value>Confirmation</value>
+  </data>
+  <data name="account_confirmation" xml:space="preserve">
+    <value>Is {0} your account?</value>
+  </data>
 </root>

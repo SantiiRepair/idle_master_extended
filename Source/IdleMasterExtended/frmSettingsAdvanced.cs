@@ -1,8 +1,10 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Drawing;
-using System.Threading.Tasks;
+using System.Diagnostics;
 using System.Windows.Forms;
+using System.Threading.Tasks;
+using IdleMasterExtended.Browser;
+using IdleMasterExtended.Utilities;
 using IdleMasterExtended.Properties;
 
 namespace IdleMasterExtended
@@ -36,7 +38,7 @@ namespace IdleMasterExtended
 
             // Read settings
             var customTheme = Settings.Default.customTheme;
-            var whiteIcons = Settings.Default.whiteIcons;
+            // var whiteIcons = Settings.Default.whiteIcons;
 
             // Define colors
             this.BackColor = customTheme ? Settings.Default.colorBgd : Settings.Default.colorBgdOriginal;
@@ -149,42 +151,6 @@ namespace IdleMasterExtended
             btnUpdate.Enabled = true;
         }
 
-
-        private async Task GetCookies()
-        {
-            try
-            {
-                byte[] masterKey = new byte[0];
-                BrowserType[] browsers = new BrowserType[] { BrowserType.Chrome, BrowserType.MSEdge };
-
-                var chromiumCookie = new ChromiumCookie();
-                foreach (BrowserType browserType in browsers)
-                {
-                    var userDataDir = chromiumCookie.GetUserDataPath(browserType);
-                    chromiumCookie.GetProfilesOf(userDataDir).ForEach(profileDir =>
-                    {
-                        if (chromiumCookie.ResolveCookiePath(profileDir))
-                        {
-                            chromiumCookie.Extract(masterKey);
-                            if (chromiumCookie.Len() > 0)
-                            {
-                                Debug.WriteLine(chromiumCookie.Cookies);
-                                return;
-                                Settings.Default.steamLoginSecure = txtSteamLoginSecure.Text.Trim();
-                                Settings.Default.myProfileURL = SteamProfile.GetSteamUrl();
-                                Settings.Default.steamparental = txtSteamParental.Text.Trim();
-                            }
-                        }
-
-                    });
-
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger.Exception(ex, "frmSettingsAdvanced -> GetCookies");
-            }
-        }
         private async void btnUpdate_Click(object sender, EventArgs e)
         {
             btnUpdate.Enabled = false;
@@ -199,15 +165,74 @@ namespace IdleMasterExtended
 
         private async void btnQuickLogin_Click(object sender, EventArgs e)
         {
-            btnQuickLogin.Enabled = false;
             txtSessionID.Enabled = false;
-            txtSteamLoginSecure.Enabled = false;
+            btnQuickLogin.Enabled = false;
             txtSteamParental.Enabled = false;
+            txtSteamLoginSecure.Enabled = false;
 
             btnQuickLogin.Text = localization.strings.checking;
 
-            await GetCookies();
-            await CheckAndSave();
+            try
+            {
+                var accounts = Steam.GetProfiles();
+                foreach (var (key, value) in accounts)
+                {
+                    DialogResult result = MessageBox.Show(
+                        string.Format(localization.strings.account_confirmation, key),
+                        localization.strings.confirmation,
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question
+                    );
+
+                    if (result == DialogResult.Yes)
+                    {
+                        BrowserType[] browsers = new BrowserType[] { BrowserType.MSEdge };
+                        foreach (BrowserType browserType in browsers)
+                        {
+                            var userDataDir = BrowserInfo.GetUserDataDir(browserType);
+                            BrowserInfo.GetProfilesOf(userDataDir).ForEach(profileDir =>
+                            {
+                                var chromium = new Chromium(profileDir, value.SteamID);
+                                var cookies = chromium.Extract();
+                                foreach (var cookie in cookies)
+                                {
+                                    Console.WriteLine(cookie.Value);
+                                    if (!cookie.IsEmpty)
+                                    {
+                                        if (cookie.Name == "sessionid")
+                                        {
+                                            txtSessionID.Text = cookie.Value;
+                                        }
+
+                                        if (cookie.Name == "steamLoginSecure")
+                                        {
+                                            txtSteamLoginSecure.Text = cookie.Value;
+                                        }
+                                    }
+                                }
+
+                                chromium.Close();
+                            });
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Exception(ex, "frmSettingsAdvanced -> GetCookies");
+            }
+            
+            if (!string.IsNullOrEmpty(txtSteamLoginSecure.Text))
+            {
+                await CheckAndSave();
+            }
+
+            txtSessionID.Enabled = true;
+            btnQuickLogin.Enabled = true;
+            txtSteamParental.Enabled = true;
+            txtSteamLoginSecure.Enabled = true;
+           
+            btnQuickLogin.Text = "Quick Login";
         }
 
         private void linkLabelWhatIsThis_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)

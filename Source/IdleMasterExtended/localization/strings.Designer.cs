@@ -79,6 +79,15 @@ namespace IdleMasterExtended.localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Is {0} your account?.
+        /// </summary>
+        internal static string account_confirmation {
+            get {
+                return ResourceManager.GetString("account_confirmation", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to &amp;Add.
         /// </summary>
         internal static string add {
@@ -174,6 +183,15 @@ namespace IdleMasterExtended.localization {
         internal static string checking {
             get {
                 return ResourceManager.GetString("checking", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to Confirmation.
+        /// </summary>
+        internal static string confirmation {
+            get {
+                return ResourceManager.GetString("confirmation", resourceCulture);
             }
         }
         
