@@ -1,19 +1,17 @@
 using System;
 using System.IO;
-using System.Collections.Generic;
-using DateTime = System.DateTime;
-using System.Diagnostics;
+using System.Net;
+using System.Linq;
+using WebSocket4Net;
+using Newtonsoft.Json;
 using System.Threading;
 using System.Net.Sockets;
-using System.Net;
-using System.Text.RegularExpressions;
-using WebSocket4Net;
+using System.Diagnostics;
+using System.Collections.Generic;
+using DateTime = System.DateTime;
 using System.Net.NetworkInformation;
-using System.Linq;
-using Newtonsoft.Json;
-using Steamworks;
+using System.Text.RegularExpressions;
 using DataReceivedEventArgs = System.Diagnostics.DataReceivedEventArgs;
-using System.Security.Cryptography;
 
 namespace IdleMasterExtended.Browser
 {
@@ -51,7 +49,6 @@ namespace IdleMasterExtended.Browser
             throw new ArgumentException($"{source} -> INVALID");
         }
 
-
         public static string GetUserDataDir(BrowserType browserType)
         {
             string userProfilePath = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
@@ -74,14 +71,14 @@ namespace IdleMasterExtended.Browser
 
             if (Directory.Exists(userDataDir))
             {
-                var profileDirectories = Directory.GetDirectories(userDataDir);
+                var directories = Directory.GetDirectories(userDataDir);
 
-                foreach (var profileDir in profileDirectories)
+                foreach (var directory in directories)
                 {
-                    string preferencesFilePath = Path.Combine(profileDir, "Preferences");
-                    if (File.Exists(preferencesFilePath))
+                    string networkPath = Path.Combine(directory, "Network");
+                    if (Directory.Exists(networkPath))
                     {
-                        profilePaths.Add(profileDir);
+                        profilePaths.Add(directory);
                     }
                 }
             }
@@ -155,12 +152,13 @@ namespace IdleMasterExtended.Browser
         public Chromium(string profileDir, string steamID)
         {
             port = GetAvailablePort();
-            proc = Launch(profileDir, $"https://steamcommunity.com/profiles/{steamID}", port);
-
+            browserType = BrowserInfo.From(profileDir); 
+            proc = Launch(profileDir, $"https://steamcommunity.com/profiles/{steamID}");
         }
 
         private static int port;
         private static Process proc;
+        private static BrowserType browserType;
         private static readonly Random random = new Random();
 
         public List<Cookie> Extract()
@@ -180,10 +178,9 @@ namespace IdleMasterExtended.Browser
                     }
 
                     var debugUrl = match.Groups[1].Value;
-                    const string cookiesRequest = "{\"id\": 1, \"method\": \"Network.getAllCookies\"}";
+                    const string cookiesRequest = "{\"id\": 1, \"method\": \"Storage.getCookies\"}";
 
                     var json = WebSocketRequest35(debugUrl, cookiesRequest);
-                    Console.WriteLine(json);
                     var rootObject = JsonConvert.DeserializeObject<RootObject>(json);
 
                     if (rootObject == null || rootObject.Result == null || rootObject.Result.Cookies == null)
@@ -213,20 +210,21 @@ namespace IdleMasterExtended.Browser
             }
         }
 
-        private static Process Launch(string profileDir, string url, int port)
+        private static Process Launch(string profileDir, string url)
         {
             var browserProcess = new Process();
-            var browserType = BrowserInfo.From(profileDir);
             var path = BrowserInfo.GetExecutablePath(browserType);
 
-            browserProcess.StartInfo.UseShellExecute = false;
             browserProcess.StartInfo.FileName = path;
-            browserProcess.StartInfo.Arguments = $"\"{url}\" --profile-directory=\"{Path.GetFileName(profileDir)}\" --remote-debugging-port={port} --remote-allow-origins=ws://localhost:{port}";
             browserProcess.StartInfo.CreateNoWindow = true;
-            browserProcess.OutputDataReceived += LogData;
-            browserProcess.ErrorDataReceived += LogData;
-            browserProcess.StartInfo.RedirectStandardOutput = true;
+            browserProcess.StartInfo.UseShellExecute = false;
             browserProcess.StartInfo.RedirectStandardError = true;
+            browserProcess.StartInfo.RedirectStandardOutput = true;
+
+            browserProcess.ErrorDataReceived += LogData;
+            browserProcess.OutputDataReceived += LogData;
+
+            browserProcess.StartInfo.Arguments = $"\"{url}\" --headless=new --profile-directory=\"{Path.GetFileName(profileDir)}\" --remote-debugging-port={port} --remote-allow-origins=ws://localhost:{port}";
 
             browserProcess.Start();
             browserProcess.BeginOutputReadLine();
@@ -238,6 +236,7 @@ namespace IdleMasterExtended.Browser
 
             return null;
         }
+        
         private static void LogData(object sender, DataReceivedEventArgs args)
         {
             if (!string.IsNullOrEmpty(args.Data))

@@ -1,11 +1,14 @@
 ﻿using System;
+using System.IO;
 using System.Drawing;
 using System.Diagnostics;
 using System.Windows.Forms;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using IdleMasterExtended.Browser;
 using IdleMasterExtended.Utilities;
 using IdleMasterExtended.Properties;
+
 
 namespace IdleMasterExtended
 {
@@ -177,36 +180,59 @@ namespace IdleMasterExtended
                 var accounts = Steam.GetProfiles();
                 foreach (var (key, value) in accounts)
                 {
-                    DialogResult result = MessageBox.Show(
+                    DialogResult accountConfirmation = MessageBox.Show(
                         string.Format(localization.strings.account_confirmation, key),
                         localization.strings.confirmation,
                         MessageBoxButtons.YesNo,
                         MessageBoxIcon.Question
                     );
 
-                    if (result == DialogResult.Yes)
+                    if (accountConfirmation == DialogResult.Yes)
                     {
                         BrowserType[] browsers = new BrowserType[] { BrowserType.MSEdge };
                         foreach (BrowserType browserType in browsers)
                         {
+                            var exePath = BrowserInfo.GetExecutablePath(browserType);
+                            var exeName = Path.GetFileNameWithoutExtension(exePath);
+
+                            var processes = Process.GetProcessesByName(exeName);
+                            if (processes.Length > 0)
+                            {
+                                DialogResult allowCloseBrowser = MessageBox.Show(
+                                    string.Format(localization.strings.allow_close_browser, BrowserInfo.ToString(browserType)),
+                                    localization.strings.confirmation,
+                                    MessageBoxButtons.YesNo,
+                                    MessageBoxIcon.Question
+                                );
+
+                                if (allowCloseBrowser == DialogResult.Yes)
+                                {
+                                    foreach (var process in processes)
+                                    {
+                                        process.Kill();
+                                    }
+                                }
+                            }
+
                             var userDataDir = BrowserInfo.GetUserDataDir(browserType);
                             BrowserInfo.GetProfilesOf(userDataDir).ForEach(profileDir =>
                             {
                                 var chromium = new Chromium(profileDir, value.SteamID);
                                 var cookies = chromium.Extract();
+
                                 foreach (var cookie in cookies)
                                 {
-                                    Console.WriteLine(cookie.Value);
                                     if (!cookie.IsEmpty)
                                     {
-                                        if (cookie.Name == "sessionid")
+                                        var cookieMappings = new Dictionary<string, Action<string>>
                                         {
-                                            txtSessionID.Text = cookie.Value;
-                                        }
+                                            { "sessionid", v => txtSessionID.Text = v },
+                                            { "steamLoginSecure", v => txtSteamLoginSecure.Text = v }
+                                        };
 
-                                        if (cookie.Name == "steamLoginSecure")
+                                        if (cookieMappings.TryGetValue(cookie.Name, out var setText))
                                         {
-                                            txtSteamLoginSecure.Text = cookie.Value;
+                                            setText(cookie.Value);
                                         }
                                     }
                                 }
@@ -221,7 +247,7 @@ namespace IdleMasterExtended
             {
                 Logger.Exception(ex, "frmSettingsAdvanced -> GetCookies");
             }
-            
+
             if (!string.IsNullOrEmpty(txtSteamLoginSecure.Text))
             {
                 await CheckAndSave();
@@ -231,7 +257,7 @@ namespace IdleMasterExtended
             btnQuickLogin.Enabled = true;
             txtSteamParental.Enabled = true;
             txtSteamLoginSecure.Enabled = true;
-           
+
             btnQuickLogin.Text = "Quick Login";
         }
 

@@ -217,6 +217,9 @@
     <EmbeddedResource Include="frmAbout.resx">
       <DependentUpon>frmAbout.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="frmSettingsAdvanced.es.resx">
+      <DependentUpon>frmSettingsAdvanced.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="frmWhitelist.resx">
       <DependentUpon>frmWhitelist.cs</DependentUpon>
     </EmbeddedResource>
@@ -231,6 +234,7 @@
     </EmbeddedResource>
     <EmbeddedResource Include="frmSettingsAdvanced.resx">
       <DependentUpon>frmSettingsAdvanced.cs</DependentUpon>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
     <EmbeddedResource Include="frmStatistics.resx">
       <DependentUpon>frmStatistics.cs</DependentUpon>

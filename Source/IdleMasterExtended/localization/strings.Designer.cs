@@ -124,6 +124,15 @@ namespace IdleMasterExtended.localization {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to If you have a Steam session open at {0} we will look for cookies for you, do you allow to close your browser?.
+        /// </summary>
+        internal static string allow_close_browser {
+            get {
+                return ResourceManager.GetString("allow_close_browser", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Idle Master Authentication Data.
         /// </summary>
         internal static string auth_data {

@@ -359,4 +359,7 @@ your Steam account.</value>
   <data name="account_confirmation" xml:space="preserve">
     <value>Is {0} your account?</value>
   </data>
+  <data name="allow_close_browser" xml:space="preserve">
+    <value>If you have a Steam session open at {0} we will look for cookies for you, do you allow to close your browser?</value>
+  </data>
 </root>
