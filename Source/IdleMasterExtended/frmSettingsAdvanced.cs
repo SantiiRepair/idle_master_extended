@@ -158,6 +158,7 @@ namespace IdleMasterExtended
         {
             btnUpdate.Enabled = false;
             txtSessionID.Enabled = false;
+            btnQuickLogin.Enabled = false;
             txtSteamLoginSecure.Enabled = false;
             txtSteamParental.Enabled = false;
 
@@ -168,6 +169,7 @@ namespace IdleMasterExtended
 
         private async void btnQuickLogin_Click(object sender, EventArgs e)
         {
+            btnUpdate.Enabled = false;
             txtSessionID.Enabled = false;
             btnQuickLogin.Enabled = false;
             txtSteamParental.Enabled = false;
