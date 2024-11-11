@@ -60,7 +60,9 @@ namespace IdleMasterExtended.Utilities
             var configFile = Path.Combine(steamPath, "config", "config.vdf");
             
             var fileContent = File.ReadAllText(configFile);
-            var desConf = VdfConvert.Deserialize(fileContent);
+
+            var desOpts = new VdfSerializerSettings() { MaximumTokenSize = 8192, UsesEscapeSequences = true };
+            var desConf = VdfConvert.Deserialize(fileContent, desOpts);
 
             var configStore = desConf.ToJson().Value.ToObject<InstallConfigStore>();
             if (configStore?.Software?.Valve?.Steam?.Accounts != null)
