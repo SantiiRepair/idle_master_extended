@@ -1,5 +1,14 @@
+> [!IMPORTANT]
+> This repository is no longer actively developed (last release 2023-03-06).
+>
+> When I first created this fork of Idle Master in 2017/2018 I aimed to fix a bug plus extend some functionality and never expected it to live this long.
+> Sadly I have not been able to find the time to properly take care of it and I have decided to leave this project as-is and archive it. I hope you find some alternative software to fill the void.
+>
+> Thank you.
+
 [![Build status](https://ci.appveyor.com/api/projects/status/96wf12emnlbmo4sj?svg=true)](https://ci.appveyor.com/project/JonasNilson/idle-master-extended)
 ![Github All Releases](https://img.shields.io/github/downloads/JonasNilson/idle_master_extended/total.svg)
+
 
 # 🚀 Idle Master Extended
 
